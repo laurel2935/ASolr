@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="ivy-report.xsl"?>
+<ivy-report version="1.0">
+	<info
+		organisation="org.apache.solr"
+		module="morphlines-core"
+		revision="working@Tao-VAIO"
+		conf="test.DfsMiniCluster"
+		confs="test, test.DfsMiniCluster"
+		date="20140617115110"/>
+	<dependencies>
+		<module organisation="org.mortbay.jetty" name="jetty">
+			<revision name="6.1.26" status="release" pubdate="20101111064054" resolver="public" artresolver="main" homepage="" downloaded="false" searched="false" default="false" conf="javadoc, default, system, compile, sources, provided, runtime, *, optional, master" position="0">
+				<metadata-artifact status="no" details="" size="3588" time="0" location="C:\Users\cicee\.ivy2\cache\org.mortbay.jetty\jetty\ivy-6.1.26.xml" searched="false" original-local-location="C:\Users\cicee\.ivy2\cache\org.mortbay.jetty\jetty\ivy-6.1.26.xml.original" origin-is-local="false" origin-location="http://repo1.maven.org/maven2/org/mortbay/jetty/jetty/6.1.26/jetty-6.1.26.pom"/>
+				<caller organisation="org.apache.solr" name="morphlines-core" conf="test.DfsMiniCluster" rev="6.1.26" rev-constraint-default="6.1.26" rev-constraint-dynamic="6.1.26" callerrev="working@Tao-VAIO"/>
+				<artifacts>
+					<artifact name="jetty" type="jar" ext="jar" status="no" details="" size="539912" time="0" location="C:\Users\cicee\.ivy2\cache\org.mortbay.jetty\jetty\jars\jetty-6.1.26.jar">
+						<origin-location is-local="false" location="http://repo1.maven.org/maven2/org/mortbay/jetty/jetty/6.1.26/jetty-6.1.26.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.mortbay.jetty" name="jetty-util">
+			<revision name="6.1.26" status="release" pubdate="20101111063810" resolver="public" artresolver="main" homepage="" downloaded="false" searched="false" default="false" conf="javadoc, default, system, compile, sources, provided, runtime, *, optional, master" position="1">
+				<metadata-artifact status="no" details="" size="3591" time="0" location="C:\Users\cicee\.ivy2\cache\org.mortbay.jetty\jetty-util\ivy-6.1.26.xml" searched="false" original-local-location="C:\Users\cicee\.ivy2\cache\org.mortbay.jetty\jetty-util\ivy-6.1.26.xml.original" origin-is-local="false" origin-location="http://repo1.maven.org/maven2/org/mortbay/jetty/jetty-util/6.1.26/jetty-util-6.1.26.pom"/>
+				<caller organisation="org.apache.solr" name="morphlines-core" conf="test.DfsMiniCluster" rev="6.1.26" rev-constraint-default="6.1.26" rev-constraint-dynamic="6.1.26" callerrev="working@Tao-VAIO"/>
+				<artifacts>
+					<artifact name="jetty-util" type="jar" ext="jar" status="no" details="" size="177131" time="0" location="C:\Users\cicee\.ivy2\cache\org.mortbay.jetty\jetty-util\jars\jetty-util-6.1.26.jar">
+						<origin-location is-local="false" location="http://repo1.maven.org/maven2/org/mortbay/jetty/jetty-util/6.1.26/jetty-util-6.1.26.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+	</dependencies>
+</ivy-report>
