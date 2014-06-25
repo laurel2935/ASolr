@@ -1,5 +1,39 @@
 package org.archive.index;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.TreeMap;
+import java.util.Map.Entry;
+
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.StoredField;
+import org.apache.lucene.document.StringField;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.IndexWriterConfig.OpenMode;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.Version;
+import org.apache.solr.client.solrj.SolrServer;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.impl.HttpSolrServer;
+import org.apache.solr.common.SolrInputDocument;
+import org.archive.TDirectory;
+import org.archive.util.IOBox;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.XMLOutputter;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -17,200 +51,257 @@ package org.archive.index;
  * limitations under the License.
  */
 
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.LongField;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig.OpenMode;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.util.Version;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.Date;
-
-/** Index all text files under a directory.
- * <p>
- * This is a command-line application demonstrating simple Lucene indexing.
- * Run it with no command-line arguments for usage information.
- */
-public class IndexFiles {
+/** 
+ * build index from files
+ */  
+public class IndexFiles  
+{  
+  private static final boolean debug = true;
+  ///////////////////////////
+  //index ..._solr.xml files
+  ///////////////////////////  
+  //[source-encoding]
+  public static final String [] LPFields = {"url", "title", "sourcerss", "id", "host", "date", "content", "source-encoding"};
   
-  private IndexFiles() {}
-
-  /** Index all text files under a directory. */
-  public static void main(String[] args) {
-    String usage = "java org.apache.lucene.demo.IndexFiles"
-                 + " [-index INDEX_PATH] [-docs DOCS_PATH] [-update]\n\n"
-                 + "This indexes the documents in DOCS_PATH, creating a Lucene index"
-                 + "in INDEX_PATH that can be searched with SearchFiles";
+  /**
+   * parse files: ..._solr.xml
+   * **/
+  private static List<TreeMap<String, String>> parseSolrFile(String file){
+    List<TreeMap<String, String>> solrdocList = new ArrayList<>();
     
-    String indexPath = "index";
-    String docsPath = null;
-    boolean create = true;
-    for(int i=0;i<args.length;i++) {
-      if ("-index".equals(args[i])) {
-        indexPath = args[i+1];
-        i++;
-      } else if ("-docs".equals(args[i])) {
-        docsPath = args[i+1];
-        i++;
-      } else if ("-update".equals(args[i])) {
-        create = false;
-      }
-    }
-
-    if (docsPath == null) {
-      System.err.println("Usage: " + usage);
-      System.exit(1);
-    }
-
-    final File docDir = new File(docsPath);
-    if (!docDir.exists() || !docDir.canRead()) {
-      System.out.println("Document directory '" +docDir.getAbsolutePath()+ "' does not exist or is not readable, please check the path");
-      System.exit(1);
-    }
-    
-    Date start = new Date();
     try {
-      System.out.println("Indexing to directory '" + indexPath + "'...");
-
-      Directory dir = FSDirectory.open(new File(indexPath));
-      // :Post-Release-Update-Version.LUCENE_XY:
-      Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_48);
-      IndexWriterConfig iwc = new IndexWriterConfig(Version.LUCENE_48, analyzer);
-
-      if (create) {
-        // Create a new index in the directory, removing any
-        // previously indexed documents:
-        iwc.setOpenMode(OpenMode.CREATE);
-      } else {
-        // Add new documents to an existing index:
-        iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
+      SAXBuilder saxBuilder = new SAXBuilder();
+      //Document xmlDoc = saxBuilder.build(new File(file)); 
+      //new InputStreamReader(new FileInputStream(targetFile), DEFAULT_ENCODING)
+      
+      Document xmlDoc = saxBuilder.build(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+      Element webtrackElement = xmlDoc.getRootElement();
+      //doc list
+      List docList = webtrackElement.getChildren("doc");
+      for(int i=0; i<docList.size(); i++){        
+        Element docElement = (Element)docList.get(i);
+        List fieldList = docElement.getChildren("field");
+        
+        TreeMap<String, String> solrdoc = new TreeMap<>();
+        
+        for(int j=0; j<fieldList.size(); j++){
+          Element fieldElement = (Element)fieldList.get(j);
+          String fieldName = fieldElement.getAttributeValue("name");
+          String fieldText = fieldElement.getText();
+          
+          solrdoc.put(fieldName, fieldText);
+        }
+        
+        String idStr = solrdoc.get("id");
+        solrdoc.put("id", idStr.substring(1, idStr.length()-1));
+        solrdocList.add(solrdoc);           
       }
-
-      // Optional: for better indexing performance, if you
-      // are indexing many documents, increase the RAM
-      // buffer.  But if you do this, increase the max heap
-      // size to the JVM (eg add -Xmxm or -Xmx1g):
-      //
-      // iwc.setRAMBufferSizeMB(.0);
-
-      IndexWriter writer = new IndexWriter(dir, iwc);
-      indexDocs(writer, docDir);
-
-      // NOTE: if you want to maximize search performance,
-      // you can optionally call forceMerge here.  This can be
-      // a terribly costly operation, so generally it's only
-      // worth it when your index is relatively static (ie
-      // you're done adding documents to it):
-      //
-      // writer.forceMerge(1);
-
-      writer.close();
-
-      Date end = new Date();
-      System.out.println(end.getTime() - start.getTime() + " total milliseconds");
-
-    } catch (IOException e) {
-      System.out.println(" caught a " + e.getClass() +
-       "\n with message: " + e.getMessage());
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
     }
+    
+    /*
+    if(debug){
+      TreeMap<String, String> solrdoc = solrdocList.get(1);
+      System.out.println(LPFields[0]+"\t"+solrdoc.get(LPFields[0]));
+      System.out.println(LPFields[1]+"\t"+solrdoc.get(LPFields[1]));
+      System.out.println(LPFields[2]+"\t"+solrdoc.get(LPFields[2]));
+      System.out.println(LPFields[3]+"\t"+solrdoc.get(LPFields[3]));
+      System.out.println(LPFields[4]+"\t"+solrdoc.get(LPFields[4]));
+      System.out.println(LPFields[5]+"\t"+solrdoc.get(LPFields[5]));
+      System.out.println(LPFields[6]+"\t"+solrdoc.get(LPFields[6]));
+      
+      if(solrdoc.containsKey(LPFields[7])){
+        System.out.println(LPFields[7]+"\t"+solrdoc.get(LPFields[7]));
+      }      
+    }
+    */
+    
+    return solrdocList;         
+  }
+  /**
+   * index files: ..._solr.xml
+   * **/    
+  public static void indexFiles_solr(String dirStr) {
+    try {        
+      String urlString = "http://localhost:8983/solr/SingleFileTestCore";  
+      SolrServer server = new HttpSolrServer(urlString); 
+      
+      File dirFile = new File(dirStr);
+      File [] files = dirFile.listFiles();
+      
+      for(File f: files){
+        List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
+        
+        List<TreeMap<String, String>> solrdocList = parseSolrFile(f.getAbsolutePath());        
+        
+        for (TreeMap<String, String> solrdoc: solrdocList) {            
+          
+          SolrInputDocument doc = new SolrInputDocument();
+          doc.addField(LPFields[0], solrdoc.get(LPFields[0]));
+          doc.addField(LPFields[1], solrdoc.get(LPFields[1]));
+          doc.addField(LPFields[2], solrdoc.get(LPFields[2]));
+          doc.addField(LPFields[3], solrdoc.get(LPFields[3]));
+          doc.addField(LPFields[4], solrdoc.get(LPFields[4]));
+          doc.addField(LPFields[5], solrdoc.get(LPFields[5]));
+          doc.addField(LPFields[6], solrdoc.get(LPFields[6]));
+          if(solrdoc.containsKey(LPFields[7])){
+            doc.addField(LPFields[7], solrdoc.get(LPFields[7]));
+          }
+           
+          docs.add(doc);
+        }
+        //执行添加
+        server.add(docs);
+        server.commit();          
+      }       
+    }catch (MalformedURLException e) {
+      e.printStackTrace();
+    }catch (SolrServerException e) {
+      e.printStackTrace();
+    }catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  
+  //////////////////////////////
+  //index ..._check.xml files
+  //////////////////////////////
+  /**
+   * parse files: ..._check.xml
+   * **/
+  private static List<TreeMap<String, String>> parseCheckFile(String file){
+    List<TreeMap<String, String>> checkdocList = new ArrayList<>();
+    
+    ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(file);
+    
+    try {
+      //build a standard pseudo-xml file
+      StringBuffer buffer = new StringBuffer();
+      buffer.append("<add>");
+      for(String line: lineList){
+        buffer.append(line);
+      }
+      buffer.append("</add>");  
+      
+      SAXBuilder saxBuilder = new SAXBuilder();      
+      Document xmlDoc = saxBuilder.build(new InputStreamReader(new ByteArrayInputStream(buffer.toString().getBytes("UTF-8"))));
+      
+      Element webtrackElement = xmlDoc.getRootElement();
+      
+      //doc list
+      XMLOutputter xmlOutputter = new XMLOutputter();
+      
+      List docList = webtrackElement.getChildren("doc");
+      for(int i=0; i<docList.size(); i++){        
+        TreeMap<String, String> checkdoc = new TreeMap<>();
+        
+        Element docElement = (Element)docList.get(i);
+        String id = docElement.getAttributeValue("id");
+        checkdoc.put("id", id);
+        
+        Element metaElement = docElement.getChild("meta-info");
+        List tagList = metaElement.getChildren("tag");
+        for(int j=0; j<tagList.size(); j++){
+          Element tagElement = (Element)tagList.get(j);
+          String tagName = tagElement.getAttributeValue("name");
+          String tagText = tagElement.getText();
+          
+          checkdoc.put(tagName, tagText);
+        }
+        
+        Element textElement = docElement.getChild("text");          
+        String text = xmlOutputter.outputString(textElement);         
+        checkdoc.put("text", text);    
+        
+        checkdocList.add(checkdoc);           
+      }
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
+    }
+    
+    if(debug){
+      TreeMap<String, String> checkdoc = checkdocList.get(100);
+      for(Entry<String, String> entry: checkdoc.entrySet()){
+         System.out.println(entry.getKey()+"\t"+entry.getValue());
+         System.out.println();
+      }     
+    }   
+    
+    return checkdocList;
   }
 
   /**
-   * Indexes the given file using the given writer, or if a directory is given,
-   * recurses over files and directories found under the given directory.
-   * 
-   * NOTE: This method indexes one document per input file.  This is slow.  For good
-   * throughput, put multiple documents into your input file(s).  An example of this is
-   * in the benchmark module, which can create "line doc" files, one document per line,
-   * using the
-   * <a href="../../../../../contrib-benchmark/org/apache/lucene/benchmark/byTask/tasks/WriteLineDocTask.html"
-   * >WriteLineDocTask</a>.
-   *  
-   * @param writer Writer to the index where the given file/dir info will be stored
-   * @param file The file to index, or the directory to recurse into to find files to index
-   * @throws IOException If there is a low-level I/O error
-   */
-  static void indexDocs(IndexWriter writer, File file)
-    throws IOException {
-    // do not try to index files that cannot be read
-    if (file.canRead()) {
-      if (file.isDirectory()) {
-        String[] files = file.list();
-        // an IO error could occur
-        if (files != null) {
-          for (int i = 0; i < files.length; i++) {
-            indexDocs(writer, new File(file, files[i]));
-          }
-        }
-      } else {
+   * index files: ..._check.xml
+   * **/
+  public static void indexFiles_check(String dirStr){
+     String indexPath = TDirectory.LPFileIndexPath;
+     
+     try {
+       System.out.println("Indexing to directory '" + indexPath + "'...");
 
-        FileInputStream fis;
-        try {
-          fis = new FileInputStream(file);
-        } catch (FileNotFoundException fnfe) {
-          // at least on windows, some temporary files raise this exception with an "access denied" message
-          // checking if the file can be read doesn't help
-          return;
-        }
-
-        try {
-
-          // make a new, empty document
-          Document doc = new Document();
-
-          // Add the path of the file as a field named "path".  Use a
-          // field that is indexed (i.e. searchable), but don't tokenize 
-          // the field into separate words and don't index term frequency
-          // or positional information:
-          Field pathField = new StringField("path", file.getPath(), Field.Store.YES);
-          doc.add(pathField);
-
-          // Add the last modified date of the file a field named "modified".
-          // Use a LongField that is indexed (i.e. efficiently filterable with
-          // NumericRangeFilter).  This indexes to milli-second resolution, which
-          // is often too fine.  You could instead create a number based on
-          // year/month/day/hour/minutes/seconds, down the resolution you require.
-          // For example the long value 4 would mean
-          // February 17, 1, 2-3 PM.
-          doc.add(new LongField("modified", file.lastModified(), Field.Store.NO));
-
-          // Add the contents of the file to a field named "contents".  Specify a Reader,
-          // so that the text of the file is tokenized and indexed, but not stored.
-          // Note that FileReader expects the file to be in UTF-8 encoding.
-          // If that's not the case searching for special characters will fail.
-          doc.add(new TextField("contents", new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8))));
-
-          if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
-            // New index, so we just add the document (no old document can be there):
-            System.out.println("adding " + file);
-            writer.addDocument(doc);
-          } else {
-            // Existing index (an old copy of this document may have been indexed) so 
-            // we use updateDocument instead to replace the old one matching the exact 
-            // path, if present:
-            System.out.println("updating " + file);
-            writer.updateDocument(new Term("path", file.getPath()), doc);
-          }
-          
-        } finally {
-          fis.close();
-        }
-      }
-    }
+           Directory dir = FSDirectory.open(new File(indexPath));          
+           Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_48);
+           IndexWriterConfig iwc = new IndexWriterConfig(Version.LUCENE_48, analyzer);
+           boolean create = true;
+           if(create) {
+             // Create a new index in the directory, removing any previously indexed documents:
+             iwc.setOpenMode(OpenMode.CREATE);
+           }else {
+             // Add new documents to an existing index:
+             iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
+           }
+           IndexWriter indexWriter = new IndexWriter(dir, iwc);
+                   
+           Date start = new Date();
+           
+         File dirFile = new File(dirStr);
+         File [] files = dirFile.listFiles();        
+         for(File f: files){
+           List<org.apache.lucene.document.Document> docs = new ArrayList<org.apache.lucene.document.Document>();
+           List<TreeMap<String, String>> checkdocList = parseCheckFile(f.getAbsolutePath()); 
+           
+           for(TreeMap<String, String> checkdoc: checkdocList){
+             // make a new, empty document
+             org.apache.lucene.document.Document doc = new org.apache.lucene.document.Document();
+                 
+                 Field idField = new StringField("id", checkdoc.get("id"), Field.Store.YES);
+               doc.add(idField);
+             for(Entry<String, String> entry: checkdoc.entrySet()){
+                if(!entry.getKey().equals("id")){
+                  StoredField storeField = new StoredField(entry.getKey(), entry.getValue());
+                  doc.add(storeField);
+                }
+             }
+             
+             docs.add(doc);
+           }
+           
+           for(org.apache.lucene.document.Document doc: docs){             
+                 indexWriter.addDocument(doc);
+           } 
+         }
+         
+         indexWriter.close();
+         Date end = new Date();
+       System.out.println(end.getTime() - start.getTime() + " total milliseconds");
+     } catch (Exception e) {
+       // TODO: handle exception
+       e.printStackTrace();
+     }
   }
-}
+  
+    
+  //////////////////////////////
+    
+  public static void main(String[] args){  
+      //1
+      //String d = "H:/v-haiyu/TaskPreparation/Temporalia/tool/test/";
+      //CreateIndexFromFile.indexFiles(d);
+          
+  }
+  
+}  

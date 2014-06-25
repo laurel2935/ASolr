@@ -23,9 +23,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.TreeMap;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -39,10 +42,12 @@ import org.apache.lucene.search.similarities.LMDirichletSimilarity;
 import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
+import org.archive.data.query.TemQuery;
 
 /** Simple command-line based search demo. */
 public class IndexSearch {  
 
+  //example-1
   /**
    * This demonstrates a typical paging search scenario, where the search engine presents 
    * pages of size n to the user. The user can then go to the next page if interested in
@@ -145,7 +150,7 @@ public class IndexSearch {
     }
   }
 
-  
+  //example-2
   /** Simple command-line based search demo. */
   public static void exampleMain(String[] args) throws Exception {
     String usage =
@@ -241,7 +246,44 @@ public class IndexSearch {
     reader.close();
   }
   
-  //
+  ///////////////////////
+  //search a lpFile via accessing index of ..._check.xml files
+  ///////////////////////
+  
+  ////parameters for fetch lp files 
+  private static IndexReader lpIndexReader;
+  private static IndexSearcher lpSearcher;
+  private static Analyzer lpAnalyzer = new KeywordAnalyzer();  
+  private static String lpField = "id";
+  private static QueryParser lpParser = new QueryParser(Version.LUCENE_48, lpField, lpAnalyzer);
+  private static boolean lpIni = false;
+  
+  public static Document fetchLPFile(String fileID){
+    Document lpDoc = null;
+    
+    try {
+      if(!lpIni){
+        String lpIndexDir = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/LPFileIndex/"; 
+        
+        lpIndexReader = DirectoryReader.open(FSDirectory.open(new File(lpIndexDir)));
+        lpSearcher = new IndexSearcher(lpIndexReader);
+      }      
+     
+      Query query = lpParser.parse(fileID);      
+      TopDocs results = lpSearcher.search(query, 2);
+      ScoreDoc[] hits = results.scoreDocs;
+      lpDoc = lpSearcher.doc(hits[0].doc);      
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
+    } 
+
+    return lpDoc;
+  }
+  
+  ////////////////////////
+  //search top-k results via accessing index of ..._solr.xml files
+  ////////////////////////
   public static void performSearch() throws Exception{
     String indexDir = "H:/solr-4.8.1/solr/example/solr/SingleFileTestCore/data/index/";
     String queryStr = "apple";
@@ -269,12 +311,20 @@ public class IndexSearch {
     for(ScoreDoc hit: hits){
       System.out.println("doc="+hit.doc+" score="+hit.score);
       Document doc = searcher.doc(hit.doc);
-      System.out.println("id\t"+doc.get("id"));
+      String id = doc.get("id");
+      System.out.println("id\t"+ id);
+      System.out.println("-------- lp file -------");
+      System.out.println(fetchLPFile(id).get("text"));
       System.out.println();      
     }
   }
   
-  ////
+  /////////////////
+  //TIR task query set
+  /////////////////
+  
+  
+  ////////////////////
   public static void main(String[] args) throws Exception{
     //1
     IndexSearch.performSearch();
