@@ -1,10 +1,13 @@
 package org.archive.util;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
 /*
@@ -56,6 +59,18 @@ public class IOBox {
       e.printStackTrace();
     }
     return null;
+  }
+  
+  public static BufferedWriter getBufferedWriter_UTF8(String targetFile) throws IOException{
+    //check exist
+    File file = new File(targetFile);
+    if(!file.exists()){
+      file.createNewFile();
+      file = new File(targetFile);
+    }
+    //generate
+    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), DEFAULT_ENCODING));
+    return writer;
   }
   
 }

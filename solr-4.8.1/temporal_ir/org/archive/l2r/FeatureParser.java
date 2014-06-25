@@ -1,4 +1,4 @@
-package org.archive.data.query;
+package org.archive.l2r;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,30 +17,8 @@ package org.archive.data.query;
  * limitations under the License.
  */
 
-public class TemSubtopic {
-  String _subId;
-  String _subType;
-  String _subTitle;
+public class FeatureParser {
   
-  public TemSubtopic(String subId, String subType, String subTitle){
-    this._subId = subId;
-    this._subType = subType;
-    this._subTitle = subTitle;
-  }
   
-  public String getSubtopicID(){
-    return this._subId;
-  }
   
-  public String getSubtopicType(){
-    return this._subType;
-  }
-  
-  public String getSubtopicTitle(){
-    return this._subTitle;
-  }
-  
-  public String toString(){
-    return this._subId+"\t"+this._subType+"\t"+this._subTitle;
-  }
 }

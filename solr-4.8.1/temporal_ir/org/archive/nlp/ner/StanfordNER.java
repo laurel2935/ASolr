@@ -1,0 +1,143 @@
+package org.archive.nlp.ner;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
+import org.archive.TDirectory;
+import org.archive.util.StrStr;
+import org.archive.util.StrStrStr;
+
+import edu.stanford.nlp.ie.crf.CRFClassifier;
+import edu.stanford.nlp.ling.CoreAnnotations;
+import edu.stanford.nlp.ling.CoreAnnotations.NamedEntityTagAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.TextAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.TokensAnnotation;
+import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.pipeline.Annotation;
+import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+import edu.stanford.nlp.util.CoreMap;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+public class StanfordNER {
+  private static final boolean debug = true;
+  
+  //private static String classifier1 = "english.all.3class.distsim.crf.ser.gz";
+  //private static String classifier2 = "english.conll.4class.distsim.crf.ser.gz";
+  //private static String classifier3 = "english.muc.7class.distsim.crf.ser.gz";
+  
+  private static String serializedClassifier = TDirectory.ROOT_JAR+"stanford-corenlp-full-2014-06-16/ner/english.all.3class.distsim.crf.ser.gz";
+  //
+  private static CRFClassifier<CoreLabel> classifier = CRFClassifier.getClassifierNoExceptions(serializedClassifier);
+  
+  /**
+   * named entity recognition
+   * **/
+  public static List<StrStr> ner(String text){
+    List<List<CoreLabel>> classify = classifier.classify(text);
+    List<StrStr> results = new ArrayList<>();
+    
+    for (List<CoreLabel> coreLabels : classify) {
+        for (CoreLabel coreLabel : coreLabels) {
+            String word = coreLabel.word();
+            String answer = coreLabel.get(CoreAnnotations.AnswerAnnotation.class);
+            if(!"O".equals(answer)){
+                results.add(new StrStr(word, answer));
+            }
+        }
+    }
+    
+    if(debug){
+      for(StrStr ne: results){
+        System.out.println(ne.toString());
+      }
+    }
+    
+    return results;
+  }
+  
+  /**
+   * suit parsing
+   * **/
+  private static Properties props = new Properties();
+  //props.put("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
+  
+  
+  public static void suitParsing(String text){
+    props.put("annotators", "tokenize, ssplit, pos, lemma, ner");
+    StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
+    
+    // create an empty Annotation just with the given text
+    Annotation document = new Annotation(text);
+
+    // run all Annotators on this text
+    pipeline.annotate(document);
+
+    // these are all the sentences in this document
+    // a CoreMap is essentially a Map that uses class objects as keys and has values with custom types
+    List<CoreMap> sentences = document.get(SentencesAnnotation.class);
+    
+    ArrayList<StrStrStr> elementList = new ArrayList<>();
+
+    for(CoreMap sentence: sentences) {
+      // traversing the words in the current sentence
+      // a CoreLabel is a CoreMap with additional token-specific methods
+      for (CoreLabel token: sentence.get(TokensAnnotation.class)) {
+        // this is the text of the token
+        String word = token.get(TextAnnotation.class);
+        // this is the POS tag of the token
+        String pos = token.get(PartOfSpeechAnnotation.class);
+        // this is the NER label of the token
+        String ne = token.get(NamedEntityTagAnnotation.class);   
+        
+        elementList.add(new StrStrStr(word, pos, ne));
+      }
+    }
+    
+    if(debug){
+      for(StrStrStr e: elementList){
+        System.out.println(e.toString());
+      }
+    }
+    
+    
+  }
+  
+  
+  
+  //
+  public static void main(String []args){
+    //1
+    //proper if use named entities? how about keyword?
+    //String text = "What has she done in order to help people in the world?";
+    //!!! suggest not merely using the subtopic title as a search query, it should be [title + description + subtopic title]
+    
+    //String text = "What was the state of Japan's economy before abenomics?";
+    //StanfordNER.ner(text);
+    
+    //2
+    //String text = "What was the state of Japan's economy before abenomics?";
+    String text = "His son Eric Tozzi, told The New York Times";
+    StanfordNER.suitParsing(text);
+    
+    
+  } 
+}

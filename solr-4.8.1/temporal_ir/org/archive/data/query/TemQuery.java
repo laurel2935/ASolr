@@ -37,6 +37,22 @@ public class TemQuery {
     this._subtopicList = subtopicList;
   }
   
+  public String getID(){
+    return this._id;
+  }
+  
+  public String getTitle(){
+    return this._title;
+  }
+  
+  public String getDescription(){
+    return this._des;
+  }
+  
+  public ArrayList<TemSubtopic> getSubtopicList(){
+    return this._subtopicList;
+  }
+  
   public String toString(){
     StringBuffer buffer = new StringBuffer();
     buffer.append(this._id+"\t"+this._title+"\n"+this._des+"\n"+this._queryTime+"\n");
@@ -44,6 +60,5 @@ public class TemQuery {
       buffer.append(subtopic.toString()+"\n");
     }
     return buffer.toString();    
-  }
-  
+  }  
 }

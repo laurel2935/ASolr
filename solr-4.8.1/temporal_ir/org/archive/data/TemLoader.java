@@ -36,7 +36,7 @@ public class TemLoader {
   
   
   //
-  private static ArrayList<TemQuery> loadTemporalQuery(){
+  public static ArrayList<TemQuery> loadTemporalQuery(){
     ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(TDirectory.NTCIR11_TIR_DryRunQueryFile);
     
     //build a standard pseudo-xml file
@@ -94,7 +94,7 @@ public class TemLoader {
     return temQueryList;  
   }
   //
-  private static TreeMap<String,ArrayList<String>> loadTemporalRels(){
+  public static TreeMap<String,ArrayList<String>> loadTemporalRels(){
     TreeMap<String,ArrayList<String>> relMap = new TreeMap<String,ArrayList<String>>();
     
     ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(TDirectory.NTCIR11_TIR_DryRunRelsFile);

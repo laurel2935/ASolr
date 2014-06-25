@@ -8,6 +8,9 @@ public class TDirectory {
 	public static final String ROOT_DATASET = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/";
 	
 	//
+	public static final String ROOT_JAR = "H:/v-haiyu/CodeBench/Pool_Jar/jar_Temporalia/";
+	
+	//
 	public static final String LivingProjectDataDir = "H:/v-haiyu/TaskPreparation/Temporalia/LivingProject/";
 	
 	//

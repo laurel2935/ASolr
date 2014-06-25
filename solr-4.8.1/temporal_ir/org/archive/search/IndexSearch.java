@@ -18,6 +18,7 @@ package org.archive.search;
  */
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -42,7 +43,10 @@ import org.apache.lucene.search.similarities.LMDirichletSimilarity;
 import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
+import org.archive.TDirectory;
+import org.archive.data.TemLoader;
 import org.archive.data.query.TemQuery;
+import org.archive.util.IOBox;
 
 /** Simple command-line based search demo. */
 public class IndexSearch {  
@@ -319,9 +323,37 @@ public class IndexSearch {
     }
   }
   
+  
+  
   /////////////////
-  //TIR task query set
+  //generate training files for learn to rank 
   /////////////////
+  private static String trainingFileForL2R = TDirectory.ROOT_OUTPUT+"";
+  
+  private void generateTrainingFile() {
+    try {
+      BufferedWriter l2rWriter = IOBox.getBufferedWriter_UTF8(trainingFileForL2R);
+      
+      ArrayList<TemQuery> temQueryList = TemLoader.loadTemporalQuery();
+      TreeMap<String,ArrayList<String>> relMap = TemLoader.loadTemporalRels();
+      
+      for(TemQuery temQuery: temQueryList){
+        String searchQ = temQuery.getTitle();
+        //top-k search
+        
+        //lpFile search
+        
+        //features
+      }
+      
+      
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
+    }
+    
+    
+  }
   
   
   ////////////////////

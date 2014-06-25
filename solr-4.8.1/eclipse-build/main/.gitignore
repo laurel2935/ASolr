@@ -4,7 +4,10 @@
 /data/
 /org/
 /README
+/analysis-extras/
 /books_numeric_ids.csv
+/clustering/
+/dih/
 /exampledocs/
 /lib-dirs/
 /log4j.properties
@@ -14,10 +17,7 @@
 /solrj/
 /spellings.txt
 /README.txt
-/analysis-extras/
 /assembly/
-/clustering/
-/dih/
 /dihextras/
 /extraction/
 /langid/

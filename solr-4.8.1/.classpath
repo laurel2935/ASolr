@@ -343,5 +343,8 @@
 	<classpathentry kind="lib" path="solr/webapp/lib/jtsio-1.8.jar"/>
 	<classpathentry kind="lib" path="solr/webapp/lib/junit.jar"/>
 	<classpathentry kind="lib" path="solr/webapp/lib/xerces.jar"/>
+	<classpathentry kind="lib" path="H:/v-haiyu/CodeBench/Pool_Jar/jar_Temporalia/stanford-corenlp-full-2014-06-16/stanford-corenlp-3.4.jar"/>
+	<classpathentry kind="lib" path="H:/v-haiyu/CodeBench/Pool_Jar/jar_Temporalia/stanford-corenlp-full-2014-06-16/stanford-corenlp-3.4-models.jar"/>
+	<classpathentry kind="lib" path="H:/v-haiyu/CodeBench/Pool_Jar/jar_Temporalia/stanford-corenlp-full-2014-06-16/jollyday.jar"/>
 	<classpathentry kind="output" path="eclipse-build/main"/>
 </classpath>
