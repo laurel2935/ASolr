@@ -2,6 +2,8 @@ package org.archive.data.query;
 
 import java.util.ArrayList;
 
+import org.archive.data.query.TemSubtopic.SubtopicType;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,6 +28,9 @@ public class TemQuery {
   String _queryTime;
   ArrayList<TemSubtopic> _subtopicList;
   
+  private static boolean useTitle = true;
+  private static boolean useDes = true;
+  
   public TemQuery(String id, String title, String description, String queryTime){
     this._id = id;
     this._title = title;
@@ -49,8 +54,52 @@ public class TemQuery {
     return this._des;
   }
   
+  public String getQueryTime(){
+    return this._queryTime.trim();
+  }
+  
   public ArrayList<TemSubtopic> getSubtopicList(){
     return this._subtopicList;
+  }
+  
+  public String getSearchQuery(){
+    String sq = "";
+    if(useTitle){
+      sq += this._title;
+      sq += ".";
+    }
+    
+    if(useDes){
+      sq += " ";
+      sq += this._des;
+    }
+    
+    return sq;
+  }
+  
+  public String getSearchQuery(SubtopicType subtopicType){
+    String sq = this.getSearchQuery();
+    
+    for(TemSubtopic temSubtopic: this._subtopicList){
+      if(temSubtopic._subType.trim().equals(subtopicType.name())){
+        sq += (" "+temSubtopic._subTitle);
+        return sq;
+      }
+    }
+    
+    return sq;    
+  }
+  
+  public TemSubtopic getTemSubtopic(SubtopicType subtopicType){
+    TemSubtopic reTemSubtopic = null;
+    
+    for(TemSubtopic temSubtopic: this._subtopicList){
+      if(temSubtopic._subType.trim().equals(subtopicType.name())){       
+        reTemSubtopic = temSubtopic;
+      }
+    }
+    
+    return reTemSubtopic;
   }
   
   public String toString(){

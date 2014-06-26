@@ -77,29 +77,34 @@ public class StanfordNER {
   /**
    * suit parsing
    * **/
-  private static Properties props = new Properties();
+  private static boolean SuitIni = false;
+  private static Properties suitProps ;
+  private static StanfordCoreNLP suitPipeline;
   //props.put("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
   
-  
-  public static void suitParsing(String text){
-    props.put("annotators", "tokenize, ssplit, pos, lemma, ner");
-    StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
+  public static ArrayList<ArrayList<StrStrStr>> suitParsing(String text){    
+    if(!SuitIni){
+      suitProps = new Properties();
+      suitProps.put("annotators", "tokenize, ssplit, pos, lemma, ner");      
+      
+      suitPipeline = new StanfordCoreNLP(suitProps);
+    }   
     
     // create an empty Annotation just with the given text
     Annotation document = new Annotation(text);
 
     // run all Annotators on this text
-    pipeline.annotate(document);
+    suitPipeline.annotate(document);
 
     // these are all the sentences in this document
     // a CoreMap is essentially a Map that uses class objects as keys and has values with custom types
     List<CoreMap> sentences = document.get(SentencesAnnotation.class);
     
-    ArrayList<StrStrStr> elementList = new ArrayList<>();
+    ArrayList<ArrayList<StrStrStr>> seAnnotationList = new ArrayList<>();
 
     for(CoreMap sentence: sentences) {
-      // traversing the words in the current sentence
-      // a CoreLabel is a CoreMap with additional token-specific methods
+      ArrayList<StrStrStr> seAnnotation = new ArrayList<>();
+      // traversing the words in the current sentence a CoreLabel is a CoreMap with additional token-specific methods
       for (CoreLabel token: sentence.get(TokensAnnotation.class)) {
         // this is the text of the token
         String word = token.get(TextAnnotation.class);
@@ -108,17 +113,52 @@ public class StanfordNER {
         // this is the NER label of the token
         String ne = token.get(NamedEntityTagAnnotation.class);   
         
-        elementList.add(new StrStrStr(word, pos, ne));
+        seAnnotation.add(new StrStrStr(word, pos, ne));
       }
+      
+      seAnnotationList.add(seAnnotation);
     }
     
     if(debug){
-      for(StrStrStr e: elementList){
-        System.out.println(e.toString());
+      for(ArrayList<StrStrStr> seAnnotation: seAnnotationList){
+        for(StrStrStr e: seAnnotation){
+          System.out.println(e.toString());
+        }
+        System.out.println();
       }
     }
     
+    return seAnnotationList;
+  }
+  
+  /**
+   * per sentence
+   * **/
+  public static ArrayList<String> getNounTerms(ArrayList<StrStrStr> elementList){
+    ArrayList<String> nTermList = new ArrayList<>();
     
+    for(StrStrStr element: elementList){
+      if(element.second.startsWith("N") || element.second.startsWith("n") ){
+        nTermList.add(element.first);
+      }
+    }
+    
+    return nTermList;
+  }
+  
+  /**
+   * per sentence
+   * **/
+  public static String getTenseStr(ArrayList<StrStrStr> elementList){
+    String tenseStr = "";
+    
+    for(StrStrStr element: elementList){
+      if(element.second.startsWith("V")){
+        tenseStr += (element.second+" ");
+      }
+    }
+    
+    return tenseStr.trim();   
   }
   
   
@@ -135,7 +175,7 @@ public class StanfordNER {
     
     //2
     //String text = "What was the state of Japan's economy before abenomics?";
-    String text = "His son Eric Tozzi, told The New York Times";
+    String text = "They tell The New York Times";
     StanfordNER.suitParsing(text);
     
     

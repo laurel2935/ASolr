@@ -1,10 +1,7 @@
 package org.archive.index;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -28,11 +25,7 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
 import org.apache.solr.common.SolrInputDocument;
 import org.archive.TDirectory;
-import org.archive.util.IOBox;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.input.SAXBuilder;
-import org.jdom.output.XMLOutputter;
+import org.archive.data.TemLoader;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -59,67 +52,7 @@ public class IndexFiles
   private static final boolean debug = true;
   ///////////////////////////
   //index ..._solr.xml files
-  ///////////////////////////  
-  //[source-encoding]
-  public static final String [] LPFields = {"url", "title", "sourcerss", "id", "host", "date", "content", "source-encoding"};
-  
-  /**
-   * parse files: ..._solr.xml
-   * **/
-  private static List<TreeMap<String, String>> parseSolrFile(String file){
-    List<TreeMap<String, String>> solrdocList = new ArrayList<>();
-    
-    try {
-      SAXBuilder saxBuilder = new SAXBuilder();
-      //Document xmlDoc = saxBuilder.build(new File(file)); 
-      //new InputStreamReader(new FileInputStream(targetFile), DEFAULT_ENCODING)
-      
-      Document xmlDoc = saxBuilder.build(new InputStreamReader(new FileInputStream(file), "UTF-8"));
-      Element webtrackElement = xmlDoc.getRootElement();
-      //doc list
-      List docList = webtrackElement.getChildren("doc");
-      for(int i=0; i<docList.size(); i++){        
-        Element docElement = (Element)docList.get(i);
-        List fieldList = docElement.getChildren("field");
-        
-        TreeMap<String, String> solrdoc = new TreeMap<>();
-        
-        for(int j=0; j<fieldList.size(); j++){
-          Element fieldElement = (Element)fieldList.get(j);
-          String fieldName = fieldElement.getAttributeValue("name");
-          String fieldText = fieldElement.getText();
-          
-          solrdoc.put(fieldName, fieldText);
-        }
-        
-        String idStr = solrdoc.get("id");
-        solrdoc.put("id", idStr.substring(1, idStr.length()-1));
-        solrdocList.add(solrdoc);           
-      }
-    } catch (Exception e) {
-      // TODO: handle exception
-      e.printStackTrace();
-    }
-    
-    /*
-    if(debug){
-      TreeMap<String, String> solrdoc = solrdocList.get(1);
-      System.out.println(LPFields[0]+"\t"+solrdoc.get(LPFields[0]));
-      System.out.println(LPFields[1]+"\t"+solrdoc.get(LPFields[1]));
-      System.out.println(LPFields[2]+"\t"+solrdoc.get(LPFields[2]));
-      System.out.println(LPFields[3]+"\t"+solrdoc.get(LPFields[3]));
-      System.out.println(LPFields[4]+"\t"+solrdoc.get(LPFields[4]));
-      System.out.println(LPFields[5]+"\t"+solrdoc.get(LPFields[5]));
-      System.out.println(LPFields[6]+"\t"+solrdoc.get(LPFields[6]));
-      
-      if(solrdoc.containsKey(LPFields[7])){
-        System.out.println(LPFields[7]+"\t"+solrdoc.get(LPFields[7]));
-      }      
-    }
-    */
-    
-    return solrdocList;         
-  }
+  ///////////////////////////    
   /**
    * index files: ..._solr.xml
    * **/    
@@ -134,20 +67,20 @@ public class IndexFiles
       for(File f: files){
         List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
         
-        List<TreeMap<String, String>> solrdocList = parseSolrFile(f.getAbsolutePath());        
+        List<TreeMap<String, String>> solrdocList = TemLoader.parseSolrFile(f.getAbsolutePath());        
         
         for (TreeMap<String, String> solrdoc: solrdocList) {            
           
           SolrInputDocument doc = new SolrInputDocument();
-          doc.addField(LPFields[0], solrdoc.get(LPFields[0]));
-          doc.addField(LPFields[1], solrdoc.get(LPFields[1]));
-          doc.addField(LPFields[2], solrdoc.get(LPFields[2]));
-          doc.addField(LPFields[3], solrdoc.get(LPFields[3]));
-          doc.addField(LPFields[4], solrdoc.get(LPFields[4]));
-          doc.addField(LPFields[5], solrdoc.get(LPFields[5]));
-          doc.addField(LPFields[6], solrdoc.get(LPFields[6]));
-          if(solrdoc.containsKey(LPFields[7])){
-            doc.addField(LPFields[7], solrdoc.get(LPFields[7]));
+          doc.addField(TemLoader.LPFields[0], solrdoc.get(TemLoader.LPFields[0]));
+          doc.addField(TemLoader.LPFields[1], solrdoc.get(TemLoader.LPFields[1]));
+          doc.addField(TemLoader.LPFields[2], solrdoc.get(TemLoader.LPFields[2]));
+          doc.addField(TemLoader.LPFields[3], solrdoc.get(TemLoader.LPFields[3]));
+          doc.addField(TemLoader.LPFields[4], solrdoc.get(TemLoader.LPFields[4]));
+          doc.addField(TemLoader.LPFields[5], solrdoc.get(TemLoader.LPFields[5]));
+          doc.addField(TemLoader.LPFields[6], solrdoc.get(TemLoader.LPFields[6]));
+          if(solrdoc.containsKey(TemLoader.LPFields[7])){
+            doc.addField(TemLoader.LPFields[7], solrdoc.get(TemLoader.LPFields[7]));
           }
            
           docs.add(doc);
@@ -169,71 +102,7 @@ public class IndexFiles
   //////////////////////////////
   //index ..._check.xml files
   //////////////////////////////
-  /**
-   * parse files: ..._check.xml
-   * **/
-  private static List<TreeMap<String, String>> parseCheckFile(String file){
-    List<TreeMap<String, String>> checkdocList = new ArrayList<>();
-    
-    ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(file);
-    
-    try {
-      //build a standard pseudo-xml file
-      StringBuffer buffer = new StringBuffer();
-      buffer.append("<add>");
-      for(String line: lineList){
-        buffer.append(line);
-      }
-      buffer.append("</add>");  
-      
-      SAXBuilder saxBuilder = new SAXBuilder();      
-      Document xmlDoc = saxBuilder.build(new InputStreamReader(new ByteArrayInputStream(buffer.toString().getBytes("UTF-8"))));
-      
-      Element webtrackElement = xmlDoc.getRootElement();
-      
-      //doc list
-      XMLOutputter xmlOutputter = new XMLOutputter();
-      
-      List docList = webtrackElement.getChildren("doc");
-      for(int i=0; i<docList.size(); i++){        
-        TreeMap<String, String> checkdoc = new TreeMap<>();
-        
-        Element docElement = (Element)docList.get(i);
-        String id = docElement.getAttributeValue("id");
-        checkdoc.put("id", id);
-        
-        Element metaElement = docElement.getChild("meta-info");
-        List tagList = metaElement.getChildren("tag");
-        for(int j=0; j<tagList.size(); j++){
-          Element tagElement = (Element)tagList.get(j);
-          String tagName = tagElement.getAttributeValue("name");
-          String tagText = tagElement.getText();
-          
-          checkdoc.put(tagName, tagText);
-        }
-        
-        Element textElement = docElement.getChild("text");          
-        String text = xmlOutputter.outputString(textElement);         
-        checkdoc.put("text", text);    
-        
-        checkdocList.add(checkdoc);           
-      }
-    } catch (Exception e) {
-      // TODO: handle exception
-      e.printStackTrace();
-    }
-    
-    if(debug){
-      TreeMap<String, String> checkdoc = checkdocList.get(100);
-      for(Entry<String, String> entry: checkdoc.entrySet()){
-         System.out.println(entry.getKey()+"\t"+entry.getValue());
-         System.out.println();
-      }     
-    }   
-    
-    return checkdocList;
-  }
-
+  
   /**
    * index files: ..._check.xml
    * **/
@@ -262,7 +131,7 @@ public class IndexFiles
          File [] files = dirFile.listFiles();        
          for(File f: files){
            List<org.apache.lucene.document.Document> docs = new ArrayList<org.apache.lucene.document.Document>();
-           List<TreeMap<String, String>> checkdocList = parseCheckFile(f.getAbsolutePath()); 
+           List<TreeMap<String, String>> checkdocList = TemLoader.parseCheckFile(f.getAbsolutePath()); 
            
            for(TreeMap<String, String> checkdoc: checkdocList){
              // make a new, empty document

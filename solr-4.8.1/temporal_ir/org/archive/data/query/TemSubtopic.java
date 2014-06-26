@@ -18,6 +18,8 @@ package org.archive.data.query;
  */
 
 public class TemSubtopic {
+  public static enum SubtopicType {Atemporal, Past, Recency, Future};
+  //
   String _subId;
   String _subType;
   String _subTitle;
