@@ -1,3 +1,13 @@
 1	problem-1: use jdk-7 instead of jdk-8
 
 2	start: StartSolrJetty	http://localhost:8983/solr
+
+
+/////////////////////
+//for indexing files
+/////////////////////
+
+1. stopword : from diversified search list
+2. synonyms : from wordnet
+3. perform index optimization 
+4. multifield, boost?

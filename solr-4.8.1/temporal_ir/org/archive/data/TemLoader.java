@@ -3,6 +3,7 @@ package org.archive.data;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.archive.util.StrStrStr;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
 /*
@@ -39,7 +41,7 @@ import org.jdom.output.XMLOutputter;
  */
 
 public class TemLoader {
-  private static final boolean debug = true;
+  private static final boolean debug = false;
   
   
   //
@@ -130,21 +132,147 @@ public class TemLoader {
   ///////////////////////////////
   //document parsing
   ///////////////////////////////
+  
+  public static String stripNonValidXMLCharacters(String in) {
+    StringBuffer out = new StringBuffer(); // Used to hold the output.
+    char current; // Used to reference the current character.
+
+    if (in == null || ("".equals(in))) return ""; // vacancy test.
+    
+    for (int i = 0; i < in.length(); i++) {
+        current = in.charAt(i); // NOTE: No IndexOutOfBoundsException caught here; it should not happen.
+        if ((current == 0x9) ||
+            (current == 0xA) ||
+            (current == 0xD) ||
+            ((current >= 0x20) && (current <= 0xD7FF)) ||
+            ((current >= 0xE000) && (current <= 0xFFFD)) ||
+            ((current >= 0x10000) && (current <= 0x10FFFF)))
+            out.append(current);
+    }
+    
+    return out.toString();
+}
+  //
   //[source-encoding]
   public static final String [] LPFields = {"url", "title", "sourcerss", "id", "host", "date", "content", "source-encoding"};
+  
+  public static String getRawSolr(org.apache.lucene.document.Document solrDoc){
+    StringBuffer buffer = new StringBuffer();
+    
+    Element docElement = new Element("doc");
+    Document rawDoc = new Document(docElement);
+    rawDoc.setRootElement(docElement);
+    
+    Element idElement = new Element("id");
+    idElement.addContent(solrDoc.get("id"));
+    rawDoc.getRootElement().addContent(idElement);       
+    
+    Element urlElement = new Element("url");
+    urlElement.addContent(solrDoc.get("url"));
+    rawDoc.getRootElement().addContent(urlElement);    
+    
+    Element rssElement = new Element("sourcerss");
+    rssElement.addContent(solrDoc.get("sourcerss"));
+    rawDoc.getRootElement().addContent(rssElement);
+    
+    Element hostElement = new Element("host");
+    hostElement.addContent(solrDoc.get("host"));
+    rawDoc.getRootElement().addContent(hostElement);
+    
+    Element dateElement = new Element("date");
+    dateElement.addContent(solrDoc.get("date"));
+    rawDoc.getRootElement().addContent(dateElement);
+    
+    Element codeElement = new Element("source-encoding");
+    String code = solrDoc.get("source-encoding");
+    if(null != code){
+      codeElement.addContent(code);
+      rawDoc.getRootElement().addContent(codeElement);
+    }    
+    
+    Element titleElement = new Element("title");
+    titleElement.addContent(solrDoc.get("title"));
+    rawDoc.getRootElement().addContent(titleElement);
+    
+    Element conElement = new Element("text");
+    conElement.addContent(solrDoc.get("content"));
+    rawDoc.getRootElement().addContent(conElement);
+    
+    XMLOutputter xmlOutput = new XMLOutputter();      
+    xmlOutput.setFormat(Format.getPrettyFormat());
+       
+    return xmlOutput.outputString(rawDoc);
+  }
+  
+  public static String getRawCheck(org.apache.lucene.document.Document checkDoc){
+    StringBuffer buffer = new StringBuffer();
+    
+    Element docElement = new Element("doc");
+    Document rawDoc = new Document(docElement);
+    rawDoc.setRootElement(docElement);
+    
+    Element idElement = new Element("id");
+    idElement.addContent(checkDoc.get("id"));
+    rawDoc.getRootElement().addContent(idElement);       
+    
+    Element urlElement = new Element("url");
+    urlElement.addContent(checkDoc.get("url"));
+    rawDoc.getRootElement().addContent(urlElement);    
+    
+    Element rssElement = new Element("sourcerss");
+    rssElement.addContent(checkDoc.get("sourcerss"));
+    rawDoc.getRootElement().addContent(rssElement);
+    
+    Element hostElement = new Element("host");
+    hostElement.addContent(checkDoc.get("host"));
+    rawDoc.getRootElement().addContent(hostElement);
+    
+    Element dateElement = new Element("date");
+    dateElement.addContent(checkDoc.get("date"));
+    rawDoc.getRootElement().addContent(dateElement);
+    
+    Element codeElement = new Element("source-encoding");
+    String code = checkDoc.get("source-encoding");
+    if(null != code){
+      codeElement.addContent(code);
+      rawDoc.getRootElement().addContent(codeElement);
+    }    
+    
+    Element titleElement = new Element("title");
+    titleElement.addContent(checkDoc.get("title"));
+    rawDoc.getRootElement().addContent(titleElement);
+    
+    Element conElement = new Element("text");
+    conElement.addContent(checkDoc.get("text"));
+    rawDoc.getRootElement().addContent(conElement);
+    
+    XMLOutputter xmlOutput = new XMLOutputter();   
+    xmlOutput.setFormat(Format.getPrettyFormat());
+       
+    return xmlOutput.outputString(rawDoc);
+  }
   
   /**
    * parse files: ..._solr.xml
    * **/
-  public static List<TreeMap<String, String>> parseSolrFile(String file){
-    List<TreeMap<String, String>> solrdocList = new ArrayList<>();
-    
+  public static List<TreeMap<String, String>> parseSolrFile(PrintStream logOddFile, String file){
     try {
+      List<TreeMap<String, String>> solrdocList = new ArrayList<>();
+      
       SAXBuilder saxBuilder = new SAXBuilder();
       //Document xmlDoc = saxBuilder.build(new File(file)); 
       //new InputStreamReader(new FileInputStream(targetFile), DEFAULT_ENCODING)
       
-      Document xmlDoc = saxBuilder.build(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+      ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(file);
+      StringBuffer buffer = new StringBuffer();
+      
+      for(String line: lineList){
+        String lineStriped = stripNonValidXMLCharacters(line);
+        buffer.append(lineStriped);
+      }
+      
+      //Document xmlDoc = saxBuilder.build(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+      Document xmlDoc = saxBuilder.build(new InputStreamReader(new ByteArrayInputStream(buffer.toString().getBytes("UTF-8"))));
       Element webtrackElement = xmlDoc.getRootElement();
       //doc list
       List docList = webtrackElement.getChildren("doc");
@@ -164,12 +292,20 @@ public class TemLoader {
         
         String idStr = solrdoc.get("id");
         solrdoc.put("id", idStr.substring(1, idStr.length()-1));
-        solrdocList.add(solrdoc);           
+        solrdocList.add(solrdoc);
       }
+      
+      //all docs
+      return solrdocList;
+      
     } catch (Exception e) {
       // TODO: handle exception
       e.printStackTrace();
+      logOddFile.print(file);
+      logOddFile.print("\n");
     }
+
+    return null;
     
     /*
     if(debug){
@@ -186,22 +322,27 @@ public class TemLoader {
         System.out.println(LPFields[7]+"\t"+solrdoc.get(LPFields[7]));
       }      
     }
-    */
-    
-    return solrdocList;         
+    */   
   }
   
   /**
    * parse files: ..._check.xml
    * **/
-  public static List<TreeMap<String, String>> parseCheckFile(String file){
-    List<TreeMap<String, String>> checkdocList = new ArrayList<>();
-    
-    ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(file);
-    
-    HashSet<String> tenseStrSet = new HashSet<>();
+  public static List<TreeMap<String, String>> parseCheckFile(PrintStream logOddFile, String file){
+    List<TreeMap<String, String>> checkdocList = null;
     
     try {
+      checkdocList = new ArrayList<>();
+      ArrayList<String> rawLineList = IOBox.getLinesAsAList_UTF8(file);    
+      
+      ArrayList<String> lineList = new ArrayList<>();
+      for(String rawLine: rawLineList){
+        String line = stripNonValidXMLCharacters(rawLine);
+        lineList.add(line);
+      }
+      
+      HashSet<String> tenseStrSet = new HashSet<>();
+      
       //build a standard pseudo-xml file
       StringBuffer buffer = new StringBuffer();
       buffer.append("<add>");
@@ -260,24 +401,29 @@ public class TemLoader {
         
         checkdocList.add(checkdoc);           
       }
+      
+      if(debug){
+        TreeMap<String, String> checkdoc = checkdocList.get(100);
+        for(Entry<String, String> entry: checkdoc.entrySet()){
+           System.out.println(entry.getKey()+"\t"+entry.getValue());
+           System.out.println();
+        }   
+        
+        System.out.println();
+        System.out.println(tenseStrSet.size());
+        for(String tenseStr: tenseStrSet){
+          System.out.println(tenseStr);
+        }
+      }
+      
+      return checkdocList;      
     } catch (Exception e) {
       // TODO: handle exception
       e.printStackTrace();
-    }
-    
-    if(debug){
-      TreeMap<String, String> checkdoc = checkdocList.get(100);
-      for(Entry<String, String> entry: checkdoc.entrySet()){
-         System.out.println(entry.getKey()+"\t"+entry.getValue());
-         System.out.println();
-      }   
       
-      System.out.println();
-      System.out.println(tenseStrSet.size());
-      for(String tenseStr: tenseStrSet){
-        System.out.println(tenseStr);
-      }
-    }   
+      logOddFile.print(file);
+      logOddFile.print("\n");
+    }
     
     return checkdocList;
   }
@@ -333,8 +479,8 @@ public class TemLoader {
     //TemLoader.loadTemporalRels();
     
     //3
-    String file = "H:/v-haiyu/TaskPreparation/Temporalia/tool/t1.xml";
-    TemLoader.parseCheckFile(file);
+    //String file = "H:/v-haiyu/TaskPreparation/Temporalia/tool/t1.xml";
+    //TemLoader.parseCheckFile(file);
   }
   
 }

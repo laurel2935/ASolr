@@ -19,6 +19,7 @@ package org.archive.search;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.lucene.analysis.Analyzer;
@@ -34,6 +36,7 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
@@ -47,6 +50,9 @@ import org.archive.TDirectory;
 import org.archive.data.TemLoader;
 import org.archive.data.query.TemQuery;
 import org.archive.util.IOBox;
+import org.archive.util.StrStr;
+import org.jdom.Element;
+import org.jdom.input.SAXBuilder;
 
 /** Simple command-line based search demo. */
 public class IndexSearch {  
@@ -373,10 +379,122 @@ public class IndexSearch {
   }
   
   
+  ///////////////////
+  //top-10 result for queries of ntcir11_Temporalia_NTCIR-11TQICQueriesFormalRun
+  ///////////////////
+  
+  private static void getTop10Results() throws Exception{
+    //queries
+    String file = TDirectory.ROOT_DATASET+"Temporalia/FormalRun/ntcir11_Temporalia_NTCIR-11TQICQueriesFormalRun.txt";
+    ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(file);
+    
+    //build a standard pseudo-xml file
+    StringBuffer buffer = new StringBuffer();
+    buffer.append("<add>");
+    for(String line: lineList){
+      buffer.append(TemLoader.stripNonValidXMLCharacters(line));
+    }
+    buffer.append("</add>"); 
+    
+    SAXBuilder saxBuilder = new SAXBuilder();      
+    org.jdom.Document xmlDoc = saxBuilder.build(new InputStreamReader(new ByteArrayInputStream(buffer.toString().getBytes("UTF-8"))));   
+    Element webtrackElement = xmlDoc.getRootElement();
+    List<Element> queryList = webtrackElement.getChildren("query");
+    
+    ArrayList<StrStr> qList = new ArrayList<>();    
+    for(Element query: queryList){
+      qList.add(new StrStr(query.getChildText("id").trim(), query.getChildText("query_string").trim()));
+    }
+    
+    //solr search
+    solrIndexReader = DirectoryReader.open(FSDirectory.open(new File(solrIndexDir)));
+    solrSearcher = new IndexSearcher(solrIndexReader);
+    solrSimilarity = new LMDirichletSimilarity();
+    solrSearcher.setSimilarity(solrSimilarity);
+    solrAnalyzer = new StandardAnalyzer(Version.LUCENE_48);
+    solrParser = new MultiFieldQueryParser(Version.LUCENE_48, new String[] {"title", "content"}, solrAnalyzer);
+    
+    //check search
+    lpIndexReader = DirectoryReader.open(FSDirectory.open(new File(lpIndexDir)));
+    lpSearcher = new IndexSearcher(lpIndexReader);
+    
+    //
+    BufferedWriter top10IDWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/idmap.txt");
+    BufferedWriter top10SolrWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/solr.txt");
+    BufferedWriter top10CheckWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/check.txt");
+    
+    int count = 1;
+    for(StrStr q: qList){
+      System.out.println((count++));
+      //1
+      Query solrQuery = solrParser.parse(q.second);
+      TopDocs solrResultList = solrSearcher.search(solrQuery, 20);
+      ScoreDoc[] solrHitList = solrResultList.scoreDocs;
+      
+      ArrayList<String> docidList = new ArrayList<>();
+      
+      for(int i=0; i<solrHitList.length; i++){
+        ScoreDoc solrHit = solrHitList[i];
+        Document doc = solrSearcher.doc(solrHit.doc);
+        String docid = doc.get("id");
+        docidList.add(docid);
+      }
+      
+      //id map
+      top10IDWriter.write(q.first);
+      top10IDWriter.newLine();
+      for(String docid: docidList){
+        top10IDWriter.write("\t"+docid);
+        top10IDWriter.newLine();
+      }
+      
+      //solr doc
+      for(int i=0; i<solrHitList.length; i++){
+        ScoreDoc solrHit = solrHitList[i];
+        Document solrDoc = solrSearcher.doc(solrHit.doc);
+        top10SolrWriter.write(TemLoader.getRawSolr(solrDoc));
+        top10SolrWriter.newLine();
+      }
+      
+      //check doc
+      for(String docid: docidList){
+        Query checkQuery = lpParser.parse(docid);      
+        TopDocs checkResults = lpSearcher.search(checkQuery, 2);
+        ScoreDoc[] checkHits = checkResults.scoreDocs;
+        Document checkDoc = lpSearcher.doc(checkHits[0].doc);
+        
+        top10CheckWriter.write(TemLoader.getRawCheck(checkDoc));
+        top10CheckWriter.newLine();
+      }
+    }   
+    
+    //
+    top10IDWriter.flush();
+    top10IDWriter.close();
+    
+    top10SolrWriter.flush();
+    top10SolrWriter.close();
+    
+    top10CheckWriter.flush();
+    top10CheckWriter.close();
+    
+  }
+  
+  ////////////////////
+  //
   ////////////////////
   public static void main(String[] args) throws Exception{
     //1
     //IndexSearch.performSearch();
+    
+    //2 top-10
+    //Just replace “&” with “&amp;” in your HTML/Javascript code!
+    try {
+      IndexSearch.getTop10Results();
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
+    }
     
   }
 }

@@ -1,7 +1,9 @@
 package org.archive.index;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -49,7 +51,8 @@ import org.archive.data.TemLoader;
  */  
 public class IndexFiles  
 {  
-  private static final boolean debug = true;
+  private static final boolean debug = false;
+  private static PrintStream logOddFile;
   ///////////////////////////
   //index ..._solr.xml files
   ///////////////////////////    
@@ -57,17 +60,31 @@ public class IndexFiles
    * index files: ..._solr.xml
    * **/    
   public static void indexFiles_solr(String dirStr) {
-    try {        
+    try {
+      logOddFile = new PrintStream(new FileOutputStream(new File(TDirectory.ROOT_OUTPUT+"logOddSolrIndexFiles.txt")));
+      //
       String urlString = "http://localhost:8983/solr/SingleFileTestCore";  
       SolrServer server = new HttpSolrServer(urlString); 
       
       File dirFile = new File(dirStr);
-      File [] files = dirFile.listFiles();
+      File [] solrFileList = dirFile.listFiles();
       
-      for(File f: files){
+      int count = 1;
+      for(File solrFile: solrFileList){
+        System.out.print("file-"+count+"\t");
+        count++;
+        
         List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
         
-        List<TreeMap<String, String>> solrdocList = TemLoader.parseSolrFile(f.getAbsolutePath());        
+        List<TreeMap<String, String>> solrdocList = TemLoader.parseSolrFile(logOddFile, solrFile.getAbsolutePath());
+        
+        if(null == solrdocList){
+          System.out.print("null");
+          System.out.println();
+          continue;
+        }  
+        System.out.print(solrFile);
+        System.out.println();
         
         for (TreeMap<String, String> solrdoc: solrdocList) {            
           
@@ -88,7 +105,15 @@ public class IndexFiles
         //执行添加
         server.add(docs);
         server.commit();          
-      }       
+      }
+      
+      //
+      logOddFile.flush();
+      logOddFile.close();
+      
+      //segments merging
+      server.optimize();   
+      
     }catch (MalformedURLException e) {
       e.printStackTrace();
     }catch (SolrServerException e) {
@@ -110,53 +135,80 @@ public class IndexFiles
      String indexPath = TDirectory.LPFileIndexPath;
      
      try {
+       logOddFile = new PrintStream(new FileOutputStream(new File(TDirectory.ROOT_OUTPUT+"logOddCheckIndexFiles.txt")));
+       
        System.out.println("Indexing to directory '" + indexPath + "'...");
 
-           Directory dir = FSDirectory.open(new File(indexPath));          
-           Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_48);
-           IndexWriterConfig iwc = new IndexWriterConfig(Version.LUCENE_48, analyzer);
-           boolean create = true;
-           if(create) {
-             // Create a new index in the directory, removing any previously indexed documents:
-             iwc.setOpenMode(OpenMode.CREATE);
-           }else {
-             // Add new documents to an existing index:
-             iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
+       Directory dir = FSDirectory.open(new File(indexPath));          
+       Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_48);
+       IndexWriterConfig iwc = new IndexWriterConfig(Version.LUCENE_48, analyzer);
+       boolean create = true;
+       if(create) {
+         // Create a new index in the directory, removing any previously indexed documents:
+         iwc.setOpenMode(OpenMode.CREATE);
+       }else {
+         // Add new documents to an existing index:
+         iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
+       }
+       IndexWriter indexWriter = new IndexWriter(dir, iwc);
+               
+       Date start = new Date();
+           
+       File dirFile = new File(dirStr);
+       File [] files = dirFile.listFiles();  
+       System.out.println(files.length);
+
+       int count = 1;
+       int badCount = 0;
+       for(File f: files){
+         System.out.print("file-"+count+"\t");
+         count++;
+         
+         List<org.apache.lucene.document.Document> docs = new ArrayList<org.apache.lucene.document.Document>();
+         
+         List<TreeMap<String, String>> checkdocList = TemLoader.parseCheckFile(logOddFile, f.getAbsolutePath());
+         
+         if(null == checkdocList){
+           System.out.print("null");
+           System.out.println();
+           
+           badCount++;
+           continue;
+         }
+         System.out.print(f);
+         System.out.println();
+         
+         for(TreeMap<String, String> checkdoc: checkdocList){
+           // make a new, empty document
+           org.apache.lucene.document.Document doc = new org.apache.lucene.document.Document();
+               
+           Field idField = new StringField("id", checkdoc.get("id"), Field.Store.YES);
+           doc.add(idField);
+           for(Entry<String, String> entry: checkdoc.entrySet()){
+              if(!entry.getKey().equals("id")){
+                StoredField storeField = new StoredField(entry.getKey(), entry.getValue());
+                doc.add(storeField);
+              }
            }
-           IndexWriter indexWriter = new IndexWriter(dir, iwc);
-                   
-           Date start = new Date();
            
-         File dirFile = new File(dirStr);
-         File [] files = dirFile.listFiles();        
-         for(File f: files){
-           List<org.apache.lucene.document.Document> docs = new ArrayList<org.apache.lucene.document.Document>();
-           List<TreeMap<String, String>> checkdocList = TemLoader.parseCheckFile(f.getAbsolutePath()); 
-           
-           for(TreeMap<String, String> checkdoc: checkdocList){
-             // make a new, empty document
-             org.apache.lucene.document.Document doc = new org.apache.lucene.document.Document();
-                 
-                 Field idField = new StringField("id", checkdoc.get("id"), Field.Store.YES);
-               doc.add(idField);
-             for(Entry<String, String> entry: checkdoc.entrySet()){
-                if(!entry.getKey().equals("id")){
-                  StoredField storeField = new StoredField(entry.getKey(), entry.getValue());
-                  doc.add(storeField);
-                }
-             }
-             
-             docs.add(doc);
-           }
-           
-           for(org.apache.lucene.document.Document doc: docs){             
-                 indexWriter.addDocument(doc);
-           } 
+           docs.add(doc);
          }
          
-         indexWriter.close();
-         Date end = new Date();
+         for(org.apache.lucene.document.Document doc: docs){             
+               indexWriter.addDocument(doc);
+         } 
+       }
+       
+       indexWriter.commit();
+       indexWriter.close();
+       
+       logOddFile.flush();
+       logOddFile.close();
+       
+       Date end = new Date();
        System.out.println(end.getTime() - start.getTime() + " total milliseconds");
+       
+       System.out.println("BadCount:\t"+badCount);
      } catch (Exception e) {
        // TODO: handle exception
        e.printStackTrace();
@@ -167,10 +219,24 @@ public class IndexFiles
   //////////////////////////////
     
   public static void main(String[] args){  
-      //1
-      //String d = "H:/v-haiyu/TaskPreparation/Temporalia/tool/test/";
-      //CreateIndexFromFile.indexFiles(d);
-          
-  }
-  
+    //1 test index ..._solr.xml files
+    /*  
+    String d = "H:/v-haiyu/TaskPreparation/Temporalia/tool/test/";
+    IndexFiles.indexFiles_solr(d);
+    */
+    
+    //2 formal index w.r.t. ..._solr.xml files
+    //************************************//    
+    /*
+    String formalSolrFileDir = "H:/v-haiyu/TaskPreparation/Temporalia/LivingProject_Solr/";
+    IndexFiles.indexFiles_solr(formalSolrFileDir);
+    */
+    //************************************//
+    
+    //3 formal index w.r.t. ..._check.xml files
+    //************************************//     
+    String formalCheckFileDir = "H:/v-haiyu/TaskPreparation/Temporalia/LivingProject_Check/";
+    IndexFiles.indexFiles_check(formalCheckFileDir);
+    //************************************//       
+  }  
 }  
