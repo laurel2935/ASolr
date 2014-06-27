@@ -20,8 +20,6 @@ import org.archive.util.StrStrStr;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
-import org.joda.time.Seconds;
-import org.joda.time.Years;
 
 
 /*
@@ -242,7 +240,7 @@ public class FeatureParser {
   //////////////////////////////////////
   
   
-  public static void getDocFeatures(BufferedWriter writer, TemQuery temQuery, SubtopicType subtopicType, ArrayList<StrStrInt> tripleList, TreeMap<String,String> metaInfo){
+  public static TemFeatureVector docFeatures(BufferedWriter writer, TemQuery temQuery, SubtopicType subtopicType, ArrayList<StrStrInt> tripleList, org.apache.lucene.document.Document lpDoc){
     //searchQuery feature
     //<1>
     String searchQuery = temQuery.getSearchQuery(subtopicType);
@@ -341,6 +339,7 @@ public class FeatureParser {
     for(int i=0; i<tenseArray.length; i++){
       totalTenseCount += tenseArray[i];
     }
+    //feature 1-4
     double ratioOfInPast, ratioOfInPF, ratioOfOutPast, ratioOfOutPF;
     ratioOfInPast = tenseArray[TenseGroup.inPast.ordinal()]/(1.0*totalTenseCount);
     ratioOfInPF = tenseArray[TenseGroup.inPF.ordinal()]/(1.0*totalTenseCount);
@@ -348,6 +347,7 @@ public class FeatureParser {
     ratioOfOutPF = tenseArray[TenseGroup.outPF.ordinal()]/(1.0*totalTenseCount);
     
     //w.r.t. subtopic's tense
+    //feature 5
     double ratioOfSubtopicTense = 0;
     for(String subtopicTense: subtopicTenseSet){
       if(acceptedTenseTag(subtopicTense)){
@@ -363,6 +363,7 @@ public class FeatureParser {
     
     //----temporal features
     //----doc-side
+    //feature 6-11
     double d_InY, d_InYM, d_InYMD, d_OutY, d_OutYM, d_OutYMD;
     
     ArrayList<String> inY_ExpList = new ArrayList<>();
@@ -400,21 +401,28 @@ public class FeatureParser {
     d_OutYMD = dayVariance(outYMD_ExpList);
     
     //---w.r.t. query issue
-    double decayYear = 0, decayMonth = 0, decayDay = 0;
+    //feature 12-14
+    double decayY = 0, decayM = 0, decayD = 0;
     
     try {
       Date queryIssueTime = TimeFormat_QueryIssue.parse(temQuery.getQueryTime());
-      Date docIssueTime = TimeFormat_DocIssue.parse(metaInfo.get("date"));
+      Date docIssueTime = TimeFormat_DocIssue.parse(lpDoc.get("date"));
       
-      decayYear = decayEfficient(queryIssueTime.getYear() - docIssueTime.getYear());
-      decayMonth = decayEfficient(queryIssueTime.getMonth() - docIssueTime.getMonth());
-      decayDay = decayEfficient(queryIssueTime.getDay() - docIssueTime.getDay());
+      decayY = decayEfficient(queryIssueTime.getYear() - docIssueTime.getYear());
+      decayM = decayEfficient(queryIssueTime.getMonth() - docIssueTime.getMonth());
+      decayD = decayEfficient(queryIssueTime.getDay() - docIssueTime.getDay());
     } catch (Exception e) {
       // TODO: handle exception
+      e.printStackTrace();
     }
     
+    //-----
+    TemFeatureVector temFeatureVector = new TemFeatureVector(ratioOfInPast, ratioOfInPF, ratioOfOutPast, ratioOfOutPF, 
+        ratioOfSubtopicTense, 
+        d_InY, d_InYM, d_InYMD, d_OutY, d_OutYM, d_OutYMD,
+        decayY, decayM, decayD);
     
-    
+    return temFeatureVector;    
   }
   
   

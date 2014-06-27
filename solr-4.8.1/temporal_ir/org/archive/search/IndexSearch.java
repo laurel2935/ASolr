@@ -50,6 +50,7 @@ import org.archive.util.IOBox;
 
 /** Simple command-line based search demo. */
 public class IndexSearch {  
+  private static final boolean debug = true;
 
   //example-1
   /**
@@ -255,32 +256,26 @@ public class IndexSearch {
   ///////////////////////
   
   ////parameters for fetch lp files 
+  private static String lpIndexDir = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/LPFileIndex/"; 
   private static IndexReader lpIndexReader;
   private static IndexSearcher lpSearcher;
   private static Analyzer lpAnalyzer = new KeywordAnalyzer();  
   private static String lpField = "id";
   private static QueryParser lpParser = new QueryParser(Version.LUCENE_48, lpField, lpAnalyzer);
   private static boolean lpIni = false;
-  
-  public static Document fetchLPFile(String fileID){
-    Document lpDoc = null;
-    
-    try {
-      if(!lpIni){
-        String lpIndexDir = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/LPFileIndex/"; 
-        
-        lpIndexReader = DirectoryReader.open(FSDirectory.open(new File(lpIndexDir)));
-        lpSearcher = new IndexSearcher(lpIndexReader);
-      }      
-     
-      Query query = lpParser.parse(fileID);      
-      TopDocs results = lpSearcher.search(query, 2);
-      ScoreDoc[] hits = results.scoreDocs;
-      lpDoc = lpSearcher.doc(hits[0].doc);      
-    } catch (Exception e) {
-      // TODO: handle exception
-      e.printStackTrace();
-    } 
+  /****/
+  public static Document fetchLPFile(String fileID) throws Exception{
+    if(!lpIni){
+      lpIndexReader = DirectoryReader.open(FSDirectory.open(new File(lpIndexDir)));
+      lpSearcher = new IndexSearcher(lpIndexReader);
+      
+      lpIni = true;
+    }      
+   
+    Query query = lpParser.parse(fileID);      
+    TopDocs results = lpSearcher.search(query, 2);
+    ScoreDoc[] hits = results.scoreDocs;
+    Document lpDoc = lpSearcher.doc(hits[0].doc); 
 
     return lpDoc;
   }
@@ -288,41 +283,63 @@ public class IndexSearch {
   ////////////////////////
   //search top-k results via accessing index of ..._solr.xml files
   ////////////////////////
-  public static void performSearch() throws Exception{
-    String indexDir = "H:/solr-4.8.1/solr/example/solr/SingleFileTestCore/data/index/";
-    String queryStr = "apple";
-    int resultNum = 10;
-    String field = "content";
+  private static boolean solrIni = false;
+  private static String solrIndexDir = "H:/solr-4.8.1/solr/example/solr/SingleFileTestCore/data/index/";
+  private static IndexReader solrIndexReader;
+  private static IndexSearcher solrSearcher;
+  private static Similarity solrSimilarity;
+  //:Post-Release-Update-Version.LUCENE_XY:
+  private static Analyzer solrAnalyzer;
+  private static QueryParser solrParser;
+  /**
+   * 
+   * **/
+  public static ArrayList<ResultSlot> initialLuceneSearch(String searchQuery, int slotNumber, String field) throws Exception{    
+    // String queryStr = "apple";
+    //int resultNum = 10;
+    //String field = "content";
+    if(!solrIni){
+      solrIndexReader = DirectoryReader.open(FSDirectory.open(new File(solrIndexDir)));
+      solrSearcher = new IndexSearcher(solrIndexReader);
+      solrSimilarity = new LMDirichletSimilarity();
+      solrSearcher.setSimilarity(solrSimilarity);
+      solrAnalyzer = new StandardAnalyzer(Version.LUCENE_48);
+      solrParser = new QueryParser(Version.LUCENE_48, field, solrAnalyzer);
+      
+      solrIni = true;
+    }
     
-    IndexReader indexReader = DirectoryReader.open(FSDirectory.open(new File(indexDir)));
-    IndexSearcher searcher = new IndexSearcher(indexReader);
-    
-    Similarity sim = new LMDirichletSimilarity();
-    searcher.setSimilarity(sim);
-    
-    // :Post-Release-Update-Version.LUCENE_XY:
-    Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_48);
-    
-    QueryParser parser = new QueryParser(Version.LUCENE_48, field, analyzer);
-    Query query = parser.parse(queryStr);
+    Query query = solrParser.parse(searchQuery);
     
     // Collect enough docs to show 5 pages
-    TopDocs results = searcher.search(query, resultNum);
-    ScoreDoc[] hits = results.scoreDocs;
+    TopDocs resultList = solrSearcher.search(query, slotNumber);
+    ScoreDoc[] hitList = resultList.scoreDocs;
     
-    System.out.println("search results:");
-    System.out.println();
-    for(ScoreDoc hit: hits){
-      System.out.println("doc="+hit.doc+" score="+hit.score);
-      Document doc = searcher.doc(hit.doc);
+    ArrayList<ResultSlot> slotList = new ArrayList<>();
+    for(int i=0; i<hitList.length; i++){
+      ScoreDoc hit = hitList[i];
+      Document doc = solrSearcher.doc(hit.doc);
       String id = doc.get("id");
-      System.out.println("id\t"+ id);
-      System.out.println("-------- lp file -------");
-      System.out.println(fetchLPFile(id).get("text"));
-      System.out.println();      
+      
+      slotList.add(new ResultSlot(id, (i+1), hit.score));
     }
+    
+    if(debug){
+      System.out.println("search results:");
+      System.out.println();
+      for(ScoreDoc hit: hitList){
+        System.out.println("doc="+hit.doc+" score="+hit.score);
+        Document doc = solrSearcher.doc(hit.doc);
+        String id = doc.get("id");
+        System.out.println("id\t"+ id);
+        System.out.println("-------- lp file -------");
+        System.out.println(fetchLPFile(id).get("text"));
+        System.out.println();      
+      }
+    }
+    
+    return slotList;    
   }
-  
   
   
   /////////////////
@@ -359,7 +376,7 @@ public class IndexSearch {
   ////////////////////
   public static void main(String[] args) throws Exception{
     //1
-    IndexSearch.performSearch();
+    //IndexSearch.performSearch();
     
   }
 }
