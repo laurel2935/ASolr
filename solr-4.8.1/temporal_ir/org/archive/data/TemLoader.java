@@ -43,10 +43,18 @@ import org.jdom.output.XMLOutputter;
 public class TemLoader {
   private static final boolean debug = false;
   
+  //
+  public static enum TemRunType{DryRun, FormalRun};
+  
   
   //
-  public static ArrayList<TemQuery> loadTemporalQuery(){
-    ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(TDirectory.NTCIR11_TIR_DryRunQueryFile);
+  public static ArrayList<TemQuery> loadTemporalQuery(TemRunType temRunType){
+    ArrayList<String> lineList;
+    if(temRunType == TemRunType.DryRun){
+      lineList = IOBox.getLinesAsAList_UTF8(TDirectory.NTCIR11_TIR_DryRunQueryFile);
+    }else{
+      lineList = IOBox.getLinesAsAList_UTF8(TDirectory.NTCIR11_TIR_FormalRunQueryFile);
+    }    
     
     //build a standard pseudo-xml file
     StringBuffer buffer = new StringBuffer();
@@ -156,9 +164,28 @@ public class TemLoader {
   //[source-encoding]
   public static final String [] LPFields = {"url", "title", "sourcerss", "id", "host", "date", "content", "source-encoding"};
   
-  public static String getRawSolr(org.apache.lucene.document.Document solrDoc){
+  public static String toSolrXml(org.apache.lucene.document.Document solrDoc){
     StringBuffer buffer = new StringBuffer();
+    buffer.append("<doc>\n");
     
+    buffer.append("<id>"+solrDoc.get("id")+"</id>\n");
+    buffer.append("<url>"+solrDoc.get("url")+"</url>\n");
+    buffer.append("<sourcerss>"+solrDoc.get("sourcerss")+"</sourcerss>\n");
+    buffer.append("<host>"+solrDoc.get("host")+"</host>\n");
+    buffer.append("<date>"+solrDoc.get("date")+"</date>\n");
+    
+    String code = solrDoc.get("source-encoding");
+    if(null != code){
+      buffer.append("<source-encoding>"+code+"</source-encoding>\n");
+    }    
+    
+    buffer.append("<title>"+solrDoc.get("title")+"</title>\n");
+    buffer.append("<content>"+solrDoc.get("content")+"</content>\n");    
+    
+    buffer.append("</doc>");
+    
+    return buffer.toString();    
+    /*
     Element docElement = new Element("doc");
     Document rawDoc = new Document(docElement);
     rawDoc.setRootElement(docElement);
@@ -202,11 +229,32 @@ public class TemLoader {
     xmlOutput.setFormat(Format.getPrettyFormat());
        
     return xmlOutput.outputString(rawDoc);
+    */
   }
   
-  public static String getRawCheck(org.apache.lucene.document.Document checkDoc){
+  public static String toCheckXml(org.apache.lucene.document.Document checkDoc){
     StringBuffer buffer = new StringBuffer();
     
+    buffer.append("<doc>\n");
+    
+    buffer.append("<id>"+checkDoc.get("id")+"</id>\n");
+    buffer.append("<url>"+checkDoc.get("url")+"</url>\n");
+    buffer.append("<sourcerss>"+checkDoc.get("sourcerss")+"</sourcerss>\n");
+    buffer.append("<host>"+checkDoc.get("host")+"</host>\n");
+    buffer.append("<date>"+checkDoc.get("date")+"</date>\n");
+    
+    String code = checkDoc.get("source-encoding");
+    if(null != code){
+      buffer.append("<source-encoding>"+code+"</source-encoding>\n");
+    }    
+    
+    buffer.append("<title>"+checkDoc.get("title")+"</title>\n");
+    buffer.append(checkDoc.get("text")+"\n");    
+    
+    buffer.append("</doc>");
+    
+    return buffer.toString(); 
+    /*
     Element docElement = new Element("doc");
     Document rawDoc = new Document(docElement);
     rawDoc.setRootElement(docElement);
@@ -250,6 +298,7 @@ public class TemLoader {
     xmlOutput.setFormat(Format.getPrettyFormat());
        
     return xmlOutput.outputString(rawDoc);
+    */
   }
   
   /**
@@ -380,6 +429,7 @@ public class TemLoader {
         Element textElement = docElement.getChild("text");          
         String text = xmlOutputter.outputString(textElement);  
         
+        /*
         if(debug){
           
           ArrayList<StrStrInt> tripleList = generateSentenceTriple(text);
@@ -396,6 +446,7 @@ public class TemLoader {
             }
           }
         }
+        */
         
         checkdoc.put("text", text);    
         
@@ -479,8 +530,8 @@ public class TemLoader {
     //TemLoader.loadTemporalRels();
     
     //3
-    //String file = "H:/v-haiyu/TaskPreparation/Temporalia/tool/t1.xml";
-    //TemLoader.parseCheckFile(file);
+    String file = "H:/v-haiyu/TaskPreparation/Temporalia/tool/t1.xml";
+    TemLoader.parseCheckFile(null, file);
   }
   
 }

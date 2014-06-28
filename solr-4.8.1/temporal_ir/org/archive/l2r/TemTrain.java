@@ -5,8 +5,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.TreeMap;
 
+import org.archive.IDirectory;
 import org.archive.TDirectory;
 import org.archive.data.TemLoader;
+import org.archive.data.TemLoader.TemRunType;
 import org.archive.data.query.TemQuery;
 import org.archive.data.query.TemSubtopic.SubtopicType;
 import org.archive.search.IndexSearch;
@@ -14,6 +16,8 @@ import org.archive.search.ResultSlot;
 import org.archive.util.IOBox;
 import org.archive.util.StrStrInt;
 import org.apache.lucene.document.Document;
+
+import ciir.umass.edu.eval.Evaluator;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -34,23 +38,30 @@ import org.apache.lucene.document.Document;
 
 public class TemTrain {
   
+  /**
+   * 
+   * **/
   public static void generateTrainFile(ArrayList<TemQuery> temQueryList, TreeMap<String,ArrayList<String>> relMap, SubtopicType subtopicType) throws Exception {
     String tFile = TDirectory.ROOT_OUTPUT+"train_"+subtopicType.toString()+".txt";
     
     int slotNumber = 50;
-    String field = "content";
     
     BufferedWriter tWriter = IOBox.getBufferedWriter_UTF8(tFile);
     
+    //System.out.println(temQueryList.size());
+    int count = 1;
     for(TemQuery temQuery: temQueryList){
+      System.out.println((count++)+"\t"+temQuery.getTitle());
       //labeled rels
       String subtopicID = temQuery.getTemSubtopic(subtopicType).getSubtopicID();
       ArrayList<String> relList = relMap.get(subtopicID);
+      
+      //set of relevant docid
       HashSet<String> relSet = new HashSet<>();
       relSet.addAll(relList);
       
       //initial retrieval run
-      ArrayList<ResultSlot> slotList = IndexSearch.initialLuceneSearch(temQuery.getSearchQuery(subtopicType), slotNumber, field);
+      ArrayList<ResultSlot> slotList = IndexSearch.initialLuceneSearch(temQuery.getSearchQuery(subtopicType), slotNumber);
       
       for(ResultSlot slot: slotList){
         
@@ -63,7 +74,8 @@ public class TemTrain {
           buffer.append(0);
         }
         buffer.append("\t");
-        buffer.append(slot._docid);
+        
+        buffer.append("qid:"+temQuery.getID());
         buffer.append("\t");
         
         //middle
@@ -71,7 +83,7 @@ public class TemTrain {
         
         ArrayList<StrStrInt> tripleList = TemLoader.generateSentenceTriple(lpDoc.get("text"));
         
-        TemFeatureVector temFeatureVector = FeatureParser.docFeatures(tWriter, temQuery, subtopicType, tripleList, lpDoc);
+        TemFeatureVector temFeatureVector = FeatureParser.docFeatures(temQuery, subtopicType, tripleList, lpDoc);
         
         buffer.append(temFeatureVector.toString());
         buffer.append("\t");
@@ -81,6 +93,10 @@ public class TemTrain {
         buffer.append(r);
         buffer.append(":");
         buffer.append(slot._score);
+        buffer.append("\t");
+        
+        //descriptioin
+        buffer.append("\t#docid="+slot._docid);
         
         //output
         tWriter.write(buffer.toString().trim());
@@ -92,9 +108,11 @@ public class TemTrain {
     tWriter.close();    
   } 
   
-  //
-  public static void generateTrainFile(SubtopicType subtopicType) throws Exception{
-    ArrayList<TemQuery> temQueryList = TemLoader.loadTemporalQuery();
+  /**
+   * 
+   * **/
+  public static void generateTrainFile(TemRunType temRunType, SubtopicType subtopicType) throws Exception{
+    ArrayList<TemQuery> temQueryList = TemLoader.loadTemporalQuery(temRunType);
     
     TreeMap<String,ArrayList<String>> relMap = TemLoader.loadTemporalRels();
     
@@ -102,15 +120,76 @@ public class TemTrain {
   }
   
   
+  /**
+   * 
+   * **/
+  public static void train(){
+    String output_train = TDirectory.ROOT_OUTPUT + "l2r/train/";
+    
+    String aBlank = " ";
+    String argStr = "";
+    //1
+    /*
+    //java -jar bin/RankLib.jar -load mymodel.txt -rank MQ2008/Fold1/test.txt -score myscorefile.txt
+        
+    argStr += ("-load"+aBlank);
+    argStr += (IDirectory.ROOT_OUTPUT+"mymodel.txt"+aBlank);
+    
+    argStr += ("-rank"+aBlank);
+    argStr += (IDirectory.ROOT_DATASET+"MQ2008/Fold1/test.txt"+aBlank);
+    
+    argStr += ("-score"+aBlank);
+    argStr += (IDirectory.ROOT_OUTPUT+"myscorefile.txt");   
+    
+    //
+    Evaluator.runTest(argStr);
+    */
+    //2
+    //java -cp bin/RankLib.jar ciir.umass.edu.features.FeatureManager -input MQ2008/Fold1/train.txt -output mydata/ -shuffle
+    
+    //java -jar bin/RankLib.jar -train MQ2008/Fold1/train.txt -ranker 4 -kcv 5 -kcvmd models/ -kcvmn ca -metric2t NDCG@10 -metric2T ERR@10
+    argStr += ("-train"+aBlank);
+    argStr += (TDirectory.ROOT_OUTPUT+"train_Atemporal.txt"+aBlank);
+    
+    argStr += ("-ranker"+aBlank);
+    argStr += ("4"+aBlank);
+    
+    argStr += ("-kcv"+aBlank);
+    argStr += ("5"+aBlank);
+    
+    argStr += ("-kcvmd"+aBlank);
+    argStr += (TDirectory.ROOT_OUTPUT+"models/"+aBlank);
+    
+    argStr += ("-kcvmn"+aBlank);
+    argStr += ("ca"+aBlank);
+    
+    argStr += ("-metric2t"+aBlank);
+    argStr += ("NDCG@10"+aBlank);
+    
+    argStr += ("-metric2T"+aBlank);
+    argStr += ("ERR@10");
+    
+    //
+    Evaluator.runTest(argStr);
+  }
+  
+  
+  //////////////////
+  //main
   //////////////////
   public static void main(String []args){
-    //1
+    ////1
+    /*
     try {
-      TemTrain.generateTrainFile(SubtopicType.Atemporal);
+      TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.atemporal);
     } catch (Exception e) {
       // TODO: handle exception
       e.printStackTrace();
     }
+    */
+    
+    //2
+    TemTrain.train();
     
     
   }

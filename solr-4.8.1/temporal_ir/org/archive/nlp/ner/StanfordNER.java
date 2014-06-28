@@ -38,7 +38,7 @@ import edu.stanford.nlp.util.CoreMap;
  */
 
 public class StanfordNER {
-  private static final boolean debug = true;
+  private static final boolean debug = false;
   
   //private static String classifier1 = "english.all.3class.distsim.crf.ser.gz";
   //private static String classifier2 = "english.conll.4class.distsim.crf.ser.gz";
@@ -77,17 +77,19 @@ public class StanfordNER {
   /**
    * suit parsing
    * **/
-  private static boolean SuitIni = false;
+  private static boolean suitIni = false;
   private static Properties suitProps ;
   private static StanfordCoreNLP suitPipeline;
   //props.put("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
   
   public static ArrayList<ArrayList<StrStrStr>> suitParsing(String text){    
-    if(!SuitIni){
+    if(!suitIni){
       suitProps = new Properties();
       suitProps.put("annotators", "tokenize, ssplit, pos, lemma, ner");      
       
       suitPipeline = new StanfordCoreNLP(suitProps);
+      
+      suitIni = true;
     }   
     
     // create an empty Annotation just with the given text

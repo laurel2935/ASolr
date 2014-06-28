@@ -347,5 +347,6 @@
 	<classpathentry kind="lib" path="H:/v-haiyu/CodeBench/Pool_Jar/jar_Temporalia/stanford-corenlp-full-2014-06-16/stanford-corenlp-3.4-models.jar"/>
 	<classpathentry kind="lib" path="H:/v-haiyu/CodeBench/Pool_Jar/jar_Temporalia/stanford-corenlp-full-2014-06-16/jollyday.jar"/>
 	<classpathentry kind="lib" path="H:/v-haiyu/CodeBench/Pool_Jar/jar_Temporalia/joda-time-2.3/joda-time-2.3.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/RankLib"/>
 	<classpathentry kind="output" path="eclipse-build/main"/>
 </classpath>

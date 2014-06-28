@@ -240,7 +240,7 @@ public class FeatureParser {
   //////////////////////////////////////
   
   
-  public static TemFeatureVector docFeatures(BufferedWriter writer, TemQuery temQuery, SubtopicType subtopicType, ArrayList<StrStrInt> tripleList, org.apache.lucene.document.Document lpDoc){
+  public static TemFeatureVector docFeatures(TemQuery temQuery, SubtopicType subtopicType, ArrayList<StrStrInt> tripleList, org.apache.lucene.document.Document lpDoc){
     //searchQuery feature
     //<1>
     String searchQuery = temQuery.getSearchQuery(subtopicType);

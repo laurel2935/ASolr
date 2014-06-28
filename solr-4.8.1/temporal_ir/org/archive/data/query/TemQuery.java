@@ -94,7 +94,7 @@ public class TemQuery {
     TemSubtopic reTemSubtopic = null;
     
     for(TemSubtopic temSubtopic: this._subtopicList){
-      if(temSubtopic._subType.trim().equals(subtopicType.name())){       
+      if(temSubtopic._subType.trim().equals(subtopicType.toString())){       
         reTemSubtopic = temSubtopic;
       }
     }

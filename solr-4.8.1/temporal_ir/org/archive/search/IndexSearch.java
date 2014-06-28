@@ -48,6 +48,7 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.archive.TDirectory;
 import org.archive.data.TemLoader;
+import org.archive.data.TemLoader.TemRunType;
 import org.archive.data.query.TemQuery;
 import org.archive.util.IOBox;
 import org.archive.util.StrStr;
@@ -56,7 +57,7 @@ import org.jdom.input.SAXBuilder;
 
 /** Simple command-line based search demo. */
 public class IndexSearch {  
-  private static final boolean debug = true;
+  private static final boolean debug = false;
 
   //example-1
   /**
@@ -300,7 +301,7 @@ public class IndexSearch {
   /**
    * 
    * **/
-  public static ArrayList<ResultSlot> initialLuceneSearch(String searchQuery, int slotNumber, String field) throws Exception{    
+  public static ArrayList<ResultSlot> initialLuceneSearch(String searchQuery, int slotNumber) throws Exception{    
     // String queryStr = "apple";
     //int resultNum = 10;
     //String field = "content";
@@ -310,7 +311,8 @@ public class IndexSearch {
       solrSimilarity = new LMDirichletSimilarity();
       solrSearcher.setSimilarity(solrSimilarity);
       solrAnalyzer = new StandardAnalyzer(Version.LUCENE_48);
-      solrParser = new QueryParser(Version.LUCENE_48, field, solrAnalyzer);
+      //solrParser = new QueryParser(Version.LUCENE_48, field, solrAnalyzer);
+      solrParser = new MultiFieldQueryParser(Version.LUCENE_48, new String[] {"title", "content"}, solrAnalyzer);
       
       solrIni = true;
     }
@@ -347,46 +349,33 @@ public class IndexSearch {
     return slotList;    
   }
   
-  
-  /////////////////
-  //generate training files for learn to rank 
-  /////////////////
-  private static String trainingFileForL2R = TDirectory.ROOT_OUTPUT+"";
-  
-  private void generateTrainingFile() {
-    try {
-      BufferedWriter l2rWriter = IOBox.getBufferedWriter_UTF8(trainingFileForL2R);
-      
-      ArrayList<TemQuery> temQueryList = TemLoader.loadTemporalQuery();
-      TreeMap<String,ArrayList<String>> relMap = TemLoader.loadTemporalRels();
-      
-      for(TemQuery temQuery: temQueryList){
-        String searchQ = temQuery.getTitle();
-        //top-k search
-        
-        //lpFile search
-        
-        //features
-      }
-      
-      
-    } catch (Exception e) {
-      // TODO: handle exception
-      e.printStackTrace();
-    }
-    
-    
-  }
-  
-  
   ///////////////////
   //top-10 result for queries of ntcir11_Temporalia_NTCIR-11TQICQueriesFormalRun
-  ///////////////////
+  ///////////////////  
   
-  private static void getTop10Results() throws Exception{
+  private static void getTop10Results(TemRunType runType) throws Exception{
     //queries
-    String file = TDirectory.ROOT_DATASET+"Temporalia/FormalRun/ntcir11_Temporalia_NTCIR-11TQICQueriesFormalRun.txt";
-    ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(file);
+    String qFile;
+    
+    BufferedWriter top20IDWriter;
+    BufferedWriter top20SolrWriter;
+    BufferedWriter top20CheckWriter;
+    
+    if(runType == TemRunType.DryRun){
+      qFile = TDirectory.ROOT_DATASET+"Temporalia/DryRun/ntcir11_Temporalia_ntcir11-temporalia-tqic-dryrun.txt";
+      
+      top20IDWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/idmap_"+TemRunType.DryRun.toString()+".txt");
+      top20SolrWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/solr_"+TemRunType.DryRun.toString()+".txt");
+      top20CheckWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/check_"+TemRunType.DryRun.toString()+".txt");
+    }else {
+      qFile = TDirectory.ROOT_DATASET+"Temporalia/FormalRun/ntcir11_Temporalia_NTCIR-11TQICQueriesFormalRun.txt";
+      
+      top20IDWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/idmap_"+TemRunType.FormalRun.toString()+".txt");
+      top20SolrWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/solr_"+TemRunType.FormalRun.toString()+".txt");
+      top20CheckWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/check_"+TemRunType.FormalRun.toString()+".txt");
+    }
+    
+    ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(qFile);
     
     //build a standard pseudo-xml file
     StringBuffer buffer = new StringBuffer();
@@ -419,9 +408,6 @@ public class IndexSearch {
     lpSearcher = new IndexSearcher(lpIndexReader);
     
     //
-    BufferedWriter top10IDWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/idmap.txt");
-    BufferedWriter top10SolrWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/solr.txt");
-    BufferedWriter top10CheckWriter = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"/top10/check.txt");
     
     int count = 1;
     for(StrStr q: qList){
@@ -441,19 +427,19 @@ public class IndexSearch {
       }
       
       //id map
-      top10IDWriter.write(q.first);
-      top10IDWriter.newLine();
+      top20IDWriter.write(q.first);
+      top20IDWriter.newLine();
       for(String docid: docidList){
-        top10IDWriter.write("\t"+docid);
-        top10IDWriter.newLine();
+        top20IDWriter.write("\t"+docid);
+        top20IDWriter.newLine();
       }
       
       //solr doc
       for(int i=0; i<solrHitList.length; i++){
         ScoreDoc solrHit = solrHitList[i];
         Document solrDoc = solrSearcher.doc(solrHit.doc);
-        top10SolrWriter.write(TemLoader.getRawSolr(solrDoc));
-        top10SolrWriter.newLine();
+        top20SolrWriter.write(TemLoader.toSolrXml(solrDoc));
+        top20SolrWriter.newLine();
       }
       
       //check doc
@@ -463,21 +449,20 @@ public class IndexSearch {
         ScoreDoc[] checkHits = checkResults.scoreDocs;
         Document checkDoc = lpSearcher.doc(checkHits[0].doc);
         
-        top10CheckWriter.write(TemLoader.getRawCheck(checkDoc));
-        top10CheckWriter.newLine();
+        top20CheckWriter.write(TemLoader.toCheckXml(checkDoc));
+        top20CheckWriter.newLine();
       }
     }   
     
     //
-    top10IDWriter.flush();
-    top10IDWriter.close();
+    top20IDWriter.flush();
+    top20IDWriter.close();
     
-    top10SolrWriter.flush();
-    top10SolrWriter.close();
+    top20SolrWriter.flush();
+    top20SolrWriter.close();
     
-    top10CheckWriter.flush();
-    top10CheckWriter.close();
-    
+    top20CheckWriter.flush();
+    top20CheckWriter.close();    
   }
   
   ////////////////////
@@ -489,12 +474,19 @@ public class IndexSearch {
     
     //2 top-10
     //Just replace “&” with “&amp;” in your HTML/Javascript code!
-    try {
-      IndexSearch.getTop10Results();
+    ///*
+    try {      
+      IndexSearch.getTop10Results(TemRunType.FormalRun);
     } catch (Exception e) {
       // TODO: handle exception
       e.printStackTrace();
     }
+    //*/
     
+    //3 lpFetch
+    /*
+    Document lpDocument = IndexSearch.fetchLPFile("lk-20110605040101_1606");
+    System.out.println(lpDocument.get("text"));
+    */
   }
 }

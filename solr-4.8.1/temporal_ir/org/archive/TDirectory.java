@@ -17,8 +17,13 @@ public class TDirectory {
 	public static final String LPFileIndexPath = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/LPFileIndex/";
 	
 	//dry-run queries
-	public static final String NTCIR11_TIR_DryRunQueryFile = ROOT_DATASET+"Temporalia/DryRun/ntcir11_Temporalia_ntcir11-temporalia-tir-dryrun.txt";
-	
+	public static final String NTCIR11_TIR_DryRunQueryFile = ROOT_DATASET+"Temporalia/DryRun/ntcir11_Temporalia_ntcir11-temporalia-tir-dryrun.txt";	
 	//dry-run rels
 	public static final String NTCIR11_TIR_DryRunRelsFile = ROOT_DATASET+"Temporalia/DryRun/ntcir11_Temporalia_ntcir11-temporalia-tir-dryrun-rels.txt";
+	
+	//formal-run queries
+	public static final String NTCIR11_TIR_FormalRunQueryFile = ROOT_DATASET+"Temporalia/FormalRun/ntcir11_Temporalia_NTCIR-11TIRTopicsFormalRun.txt";
+	//formal-run rels
+	public static final String NTCIR11_TIR_FormalRunRelsFile = ROOT_DATASET+"Temporalia/FormalRun/...";
+	
 }
