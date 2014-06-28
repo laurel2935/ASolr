@@ -14,6 +14,9 @@ public class TDirectory {
 	public static final String LivingProjectDataDir = "H:/v-haiyu/TaskPreparation/Temporalia/LivingProject/";
 	
 	//
+	public static final String TemBufferDir = ROOT_OUTPUT+"TemBuffer/";
+	
+	//
 	public static final String LPFileIndexPath = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/LPFileIndex/";
 	
 	//dry-run queries

@@ -2,7 +2,12 @@ package org.archive.l2r;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -11,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.TreeMap;
 
+import org.archive.TDirectory;
 import org.archive.data.query.TemQuery;
 import org.archive.data.query.TemSubtopic;
 import org.archive.data.query.TemSubtopic.SubtopicType;
@@ -40,6 +46,7 @@ import org.jdom.input.SAXBuilder;
  */
 
 public class FeatureParser {
+  public static final boolean debug = false;
   
   
   ///////////////////////
@@ -267,11 +274,61 @@ public class FeatureParser {
     ArrayList<String> outTemporalExpList = new ArrayList<>();
     int outSenCount = 0;
     
+    ArrayList<ArrayList<ArrayList<StrStrStr>>> parsedList = null;
+    boolean useLoadedVersion = false;
+    //----
+    String prefix = Integer.toString(tripleList.hashCode());    
+    String key = Integer.toString(tripleList.size())+"_"+StanfordNER.encryptToMD5(tripleList.get(0).toString());
+    String bufferFile = TDirectory.TemBufferDir+prefix+"_"+key+".ser";
+    File bFile = new File(bufferFile);
+    
+    if(bFile.exists()){      
+      if(debug){
+        System.out.println("loading buffered file...");
+      }
+      try {
+        FileInputStream fis = new FileInputStream(bufferFile);
+        ObjectInputStream ois = new ObjectInputStream(fis);
+        parsedList = (ArrayList<ArrayList<ArrayList<StrStrStr>>>) ois.readObject();
+        ois.close();
+        useLoadedVersion = true;
+        
+        if(debug){
+          for(ArrayList<ArrayList<StrStrStr>> seAnn: parsedList){
+            for(ArrayList<StrStrStr> ann: seAnn){
+              System.out.println(ann.toString());
+            }
+          }
+        } 
+      } catch (Exception e) {
+        // TODO: handle exception
+        e.printStackTrace();
+      }      
+      if(null == parsedList){
+        System.err.println("loading buffered file error!");
+        System.exit(1);   
+      }        
+    }
+    //----
+    
+    if(!useLoadedVersion){
+      parsedList = new ArrayList<>();
+    }
     //per sentence
-    for(StrStrInt triple: tripleList){ 
+    for(int k=0; k<tripleList.size(); k++){ 
+      StrStrInt triple = tripleList.get(k);
+      
       //-------sentence.txt-----
       //initial annotation
-      ArrayList<ArrayList<StrStrStr>> seAnnotationList = StanfordNER.suitParsing(triple.second);
+      ArrayList<ArrayList<StrStrStr>> seAnnotationList;
+      if(useLoadedVersion){
+        seAnnotationList = parsedList.get(k);
+      }else{
+        seAnnotationList = StanfordNER.suitParsing(triple.second);
+        
+        parsedList.add(seAnnotationList);
+      }
+      
       //noun terms in a sentence
       HashSet<String> seNounSet = new HashSet<>();
       for(ArrayList<StrStrStr> seAnnotation: seAnnotationList){
@@ -421,6 +478,20 @@ public class FeatureParser {
         ratioOfSubtopicTense, 
         d_InY, d_InYM, d_InYMD, d_OutY, d_OutYM, d_OutYMD,
         decayY, decayM, decayD);
+    
+    //-----buffer
+    if(!useLoadedVersion){
+      try {
+        FileOutputStream fos = new FileOutputStream(bufferFile);
+        ObjectOutputStream oos = new ObjectOutputStream(fos);
+        oos.writeObject(parsedList);
+        oos.close();
+      } catch (Exception e) {
+        // TODO: handle exception
+        e.printStackTrace();
+      } 
+    }     
+    //-----buffer
     
     return temFeatureVector;    
   }

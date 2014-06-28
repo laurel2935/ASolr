@@ -1,5 +1,12 @@
 package org.archive.nlp.ner;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -77,12 +84,45 @@ public class StanfordNER {
   /**
    * suit parsing
    * **/
+  //
+  public static String encryptToMD5(String info) {  
+    byte[] digesta = null;  
+    try {  
+        // 得到一个md5的消息摘要  
+        MessageDigest alga = MessageDigest.getInstance("MD5");  
+        // 添加要进行计算摘要的信息  
+        alga.update(info.getBytes());  
+        // 得到该摘要  
+        digesta = alga.digest();  
+    } catch (NoSuchAlgorithmException e) {  
+        e.printStackTrace();  
+    }  
+    // 将摘要转为字符串  
+    String rs = byte2hex(digesta);  
+    return rs;  
+  }  
+  public static String byte2hex(byte[] b) {  
+    String hs = "";  
+    String stmp = "";  
+    for (int n = 0; n < b.length; n++) {  
+        stmp = (java.lang.Integer.toHexString(b[n] & 0XFF));  
+        if (stmp.length() == 1) {  
+            hs = hs + "0" + stmp;  
+        } else {  
+            hs = hs + stmp;  
+        }  
+    }  
+    return hs.toUpperCase();  
+  }
+  
+  //
   private static boolean suitIni = false;
   private static Properties suitProps ;
   private static StanfordCoreNLP suitPipeline;
   //props.put("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
   
   public static ArrayList<ArrayList<StrStrStr>> suitParsing(String text){    
+    //
     if(!suitIni){
       suitProps = new Properties();
       suitProps.put("annotators", "tokenize, ssplit, pos, lemma, ner");      
@@ -91,6 +131,46 @@ public class StanfordNER {
       
       suitIni = true;
     }   
+    
+    ArrayList<ArrayList<StrStrStr>> seAnnotationList = null;
+    
+    //--not used due to fine granularity
+    /*
+    String prefix = Integer.toString(text.hashCode());
+    String key = encryptToMD5(text);
+    String bufferFile = TDirectory.TemBufferDir+text.hashCode()+prefix+"_"+key+".ser";
+    File bFile = new File(bufferFile);
+    if(bFile.exists()){      
+      if(debug){
+        System.out.println("loading buffered file...");
+      }
+      try {
+        FileInputStream fis = new FileInputStream(bufferFile);
+        ObjectInputStream ois = new ObjectInputStream(fis);
+        seAnnotationList = (ArrayList<ArrayList<StrStrStr>>) ois.readObject();
+        
+        if(debug){
+          for(ArrayList<StrStrStr> seAnn: seAnnotationList){
+            for(StrStrStr ann: seAnn){
+              System.out.println(ann.toString());
+            }
+          }
+        }
+        
+        ois.close();
+      } catch (Exception e) {
+        // TODO: handle exception
+        e.printStackTrace();
+      }      
+      if(null != seAnnotationList){
+        return seAnnotationList;   
+      }else{
+        System.err.println("loading buffered file error!");
+        System.exit(1);
+      }         
+    }
+    */
+    //--
     
     // create an empty Annotation just with the given text
     Annotation document = new Annotation(text);
@@ -102,7 +182,7 @@ public class StanfordNER {
     // a CoreMap is essentially a Map that uses class objects as keys and has values with custom types
     List<CoreMap> sentences = document.get(SentencesAnnotation.class);
     
-    ArrayList<ArrayList<StrStrStr>> seAnnotationList = new ArrayList<>();
+    seAnnotationList = new ArrayList<>();
 
     for(CoreMap sentence: sentences) {
       ArrayList<StrStrStr> seAnnotation = new ArrayList<>();
@@ -129,6 +209,20 @@ public class StanfordNER {
         System.out.println();
       }
     }
+    
+    //--not used due to fine granularity
+    /*
+    try {
+      FileOutputStream fos = new FileOutputStream(bufferFile);
+      ObjectOutputStream oos = new ObjectOutputStream(fos);
+      oos.writeObject(seAnnotationList);
+      oos.close();
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
+    } 
+    */
+    //--
     
     return seAnnotationList;
   }

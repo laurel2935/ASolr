@@ -52,6 +52,13 @@ public class TemTrain {
     int count = 1;
     for(TemQuery temQuery: temQueryList){
       System.out.println((count++)+"\t"+temQuery.getTitle());
+      
+      /*
+      if(count>3){
+        break;
+      }
+      */
+      
       //labeled rels
       String subtopicID = temQuery.getTemSubtopic(subtopicType).getSubtopicID();
       ArrayList<String> relList = relMap.get(subtopicID);
@@ -179,17 +186,23 @@ public class TemTrain {
   //////////////////
   public static void main(String []args){
     ////1
-    /*
+    ///*
     try {
       TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.atemporal);
+      
+      TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.future);
+      
+      TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.past);
+      
+      TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.recency);
     } catch (Exception e) {
       // TODO: handle exception
       e.printStackTrace();
     }
-    */
+    //*/
     
     //2
-    TemTrain.train();
+    //TemTrain.train();
     
     
   }

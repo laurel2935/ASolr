@@ -92,7 +92,7 @@ public class TemRerank {
     return buffer.toString().trim();
   }
   /****/
-  private static Evaluator evaluator = new Evaluator(RANKER_TYPE.ADARANK, "NDCG@10", "ERR@10");
+  private static Evaluator evaluator = new Evaluator(RANKER_TYPE.LAMBDAMART, "NDCG@10", "ERR@10");
   
   public static ArrayList<String> rerank(TemQuery temQuery, SubtopicType subtopicType, ArrayList<ResultSlot> slotList) throws Exception{
     
@@ -145,11 +145,29 @@ public class TemRerank {
     return rerankedDocList;  
   }
   
+  //score test
+  //results demonstrate the consistence !
+  public static void test(){
+    ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8("H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Ranklib/MQ2008/Fold1/test.txt");
+    StringBuffer buffer = new StringBuffer();
+    for(String line: lineList){
+      if(line.length() > 0){
+        buffer.append(line.trim()+"\n");
+      }
+    }
+    //
+    ArrayList<StrStrDouble> docList = evaluator.score("H:/v-haiyu/CodeBench/Pool_Output/Output_Ranklib/mymodel.txt", buffer.toString().trim());
+    for(StrStrDouble doc: docList){
+      System.out.println(doc.toString());
+    }
+  }
+  
   /////////////////////
   //main
   /////////////////////
   public static void main(String []args){
-    
+    //1
+    TemRerank.test();
   }
   
 }
