@@ -1,0 +1,11 @@
+
+
+(1) test pair-wise w.r.t. list-wise approaches : cross-validation
+
+		& the best one among each type l2r model
+
+(2) add more lucene-based features
+
+(3) use all training data for training one model
+
+(4) specific models for each temporal type		w.r.t. no differentiation among temporal types

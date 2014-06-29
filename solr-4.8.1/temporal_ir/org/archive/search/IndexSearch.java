@@ -58,6 +58,8 @@ import org.jdom.input.SAXBuilder;
 /** Simple command-line based search demo. */
 public class IndexSearch {  
   private static final boolean debug = false;
+  
+  public static enum SimType{LM, TFIDF};
 
   //example-1
   /**
@@ -301,15 +303,24 @@ public class IndexSearch {
   /**
    * 
    * **/
-  public static ArrayList<ResultSlot> initialLuceneSearch(String searchQuery, int slotNumber) throws Exception{    
+  public static ArrayList<ResultSlot> initialLuceneSearch(SimType simType, String searchQuery, int slotNumber) throws Exception{    
     // String queryStr = "apple";
     //int resultNum = 10;
     //String field = "content";
     if(!solrIni){
       solrIndexReader = DirectoryReader.open(FSDirectory.open(new File(solrIndexDir)));
       solrSearcher = new IndexSearcher(solrIndexReader);
-      solrSimilarity = new LMDirichletSimilarity();
-      solrSearcher.setSimilarity(solrSimilarity);
+      
+      if(simType == SimType.LM){
+        solrSimilarity = new LMDirichletSimilarity();
+        solrSearcher.setSimilarity(solrSimilarity);
+      }else if (simType == SimType.TFIDF) {
+        //use default
+      }else{
+        System.err.println("SimType Input Error!");
+        System.exit(1);
+      }
+      
       solrAnalyzer = new StandardAnalyzer(Version.LUCENE_48);
       //solrParser = new QueryParser(Version.LUCENE_48, field, solrAnalyzer);
       solrParser = new MultiFieldQueryParser(Version.LUCENE_48, new String[] {"title", "content"}, solrAnalyzer);
@@ -326,7 +337,13 @@ public class IndexSearch {
     ArrayList<ResultSlot> slotList = new ArrayList<>();
     for(int i=0; i<hitList.length; i++){
       ScoreDoc hit = hitList[i];
+      
+      //
+      
       Document doc = solrSearcher.doc(hit.doc);
+      
+      //
+      
       String id = doc.get("id");
       
       slotList.add(new ResultSlot(id, (i+1), hit.score));

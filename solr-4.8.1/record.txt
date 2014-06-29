@@ -11,3 +11,18 @@
 2. synonyms : from wordnet
 3. perform index optimization 
 4. multifield, boost?
+
+5 <1>
+dry-run revisement:
+(1) replace “&” with “&amp;” in query file
+(2) dry-run query: 007f "would/try" is altered to "would try"		015p: "improve/preserve" is altered to "improve/preserve" based two sub-sentences!
+	the same goes 013r: "preserve/protect"
+
+for formal run: 
+	003p & 003f: "HIV/AIDS" is altered to "HIV or AIDS"
+	
+	007 : "and/or" -> "and"
+	
+	022a: {"transgender"} -> {transgender} 
+	
+	"smoke/passive" -> smoke or passive

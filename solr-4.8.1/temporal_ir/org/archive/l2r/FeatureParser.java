@@ -46,8 +46,7 @@ import org.jdom.input.SAXBuilder;
  */
 
 public class FeatureParser {
-  public static final boolean debug = false;
-  
+  public static final boolean debug = false;  
   
   ///////////////////////
   //tense part
@@ -370,25 +369,30 @@ public class FeatureParser {
       }
       
       //----tense part----
-      String tenseStr = StanfordNER.getTenseStr(seAnnotationList.get(0));
-      String [] tenseTagArray = tenseStr.split("\\s");
-      for(int i=0; i<tenseTagArray.length; i++){
-        if(acceptedTenseTag(tenseTagArray[i])){
-          if(isPastTenseTag(tenseTagArray[i])){
-            if(triple.third > 0){
-              tenseArray[TenseGroup.inPast.ordinal()] += 1;
-            }else{
-              tenseArray[TenseGroup.outPast.ordinal()] += 1;
-            }            
-          }else{
-            if(triple.third > 0){
-              tenseArray[TenseGroup.inPF.ordinal()] += 1;
-            }else{
-              tenseArray[TenseGroup.outPF.ordinal()] += 1;
+      if(null!=seAnnotationList && seAnnotationList.size()>0){
+        String tenseStr = StanfordNER.getTenseStr(seAnnotationList.get(0));
+        String [] tenseTagArray = tenseStr.split("\\s");
+        
+        if(null!=tenseTagArray && tenseTagArray.length>0){
+          for(int i=0; i<tenseTagArray.length; i++){
+            if(acceptedTenseTag(tenseTagArray[i])){
+              if(isPastTenseTag(tenseTagArray[i])){
+                if(triple.third > 0){
+                  tenseArray[TenseGroup.inPast.ordinal()] += 1;
+                }else{
+                  tenseArray[TenseGroup.outPast.ordinal()] += 1;
+                }            
+              }else{
+                if(triple.third > 0){
+                  tenseArray[TenseGroup.inPF.ordinal()] += 1;
+                }else{
+                  tenseArray[TenseGroup.outPF.ordinal()] += 1;
+                }
+              }
             }
           }
         }
-      }     
+      }                
     }
     
     //----tense features--(5)--

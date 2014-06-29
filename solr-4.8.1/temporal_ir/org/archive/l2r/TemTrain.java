@@ -1,7 +1,9 @@
 package org.archive.l2r;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.TreeMap;
 
@@ -12,12 +14,15 @@ import org.archive.data.TemLoader.TemRunType;
 import org.archive.data.query.TemQuery;
 import org.archive.data.query.TemSubtopic.SubtopicType;
 import org.archive.search.IndexSearch;
+import org.archive.search.IndexSearch.SimType;
 import org.archive.search.ResultSlot;
 import org.archive.util.IOBox;
 import org.archive.util.StrStrInt;
 import org.apache.lucene.document.Document;
 
 import ciir.umass.edu.eval.Evaluator;
+import ciir.umass.edu.learning.RANKER_TYPE;
+import ciir.umass.edu.utilities.MyThreadPool;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -37,12 +42,13 @@ import ciir.umass.edu.eval.Evaluator;
  */
 
 public class TemTrain {
+  public static enum TemMOdelType{Entire, Per};
   
   /**
    * 
    * **/
-  public static void generateTrainFile(ArrayList<TemQuery> temQueryList, TreeMap<String,ArrayList<String>> relMap, SubtopicType subtopicType) throws Exception {
-    String tFile = TDirectory.ROOT_OUTPUT+"train_"+subtopicType.toString()+".txt";
+  public static void generateTrainFile(SimType simType, ArrayList<TemQuery> temQueryList, TreeMap<String,ArrayList<String>> relMap, SubtopicType subtopicType) throws Exception {
+    String tFile = TDirectory.ROOT_OUTPUT+"FinalTrainFiles/"+simType.toString()+"_train_"+subtopicType.toString()+".txt";
     
     int slotNumber = 50;
     
@@ -54,6 +60,7 @@ public class TemTrain {
       System.out.println((count++)+"\t"+temQuery.getTitle());
       
       /*
+      //for test only
       if(count>3){
         break;
       }
@@ -68,18 +75,22 @@ public class TemTrain {
       relSet.addAll(relList);
       
       //initial retrieval run
-      ArrayList<ResultSlot> slotList = IndexSearch.initialLuceneSearch(temQuery.getSearchQuery(subtopicType), slotNumber);
+      ArrayList<ResultSlot> slotList = IndexSearch.initialLuceneSearch(simType, temQuery.getSearchQuery(subtopicType), slotNumber);
       
-      for(ResultSlot slot: slotList){
-        
+      for(ResultSlot rSlot: slotList){
+        if(relSet.contains(rSlot._docid)){
+          rSlot.setGrTruthRelScore(1.0f);          
+        }else{
+          rSlot.setGrTruthRelScore(0.0f);
+        }        
+      }
+      Collections.sort(slotList);
+      
+      for(ResultSlot slot: slotList){        
         StringBuffer buffer = new StringBuffer();
         
-        //head
-        if(relSet.contains(slot._docid)){
-          buffer.append(1);          
-        }else{
-          buffer.append(0);
-        }
+        //head        
+        buffer.append(Float.toString(slot._grTruthRelScore));
         buffer.append("\t");
         
         buffer.append("qid:"+temQuery.getID());
@@ -89,6 +100,10 @@ public class TemTrain {
         Document lpDoc = IndexSearch.fetchLPFile(slot._docid);
         
         ArrayList<StrStrInt> tripleList = TemLoader.generateSentenceTriple(lpDoc.get("text"));
+        
+        if(null==tripleList || 0==tripleList.size()){
+          continue;
+        }
         
         TemFeatureVector temFeatureVector = FeatureParser.docFeatures(temQuery, subtopicType, tripleList, lpDoc);
         
@@ -118,17 +133,85 @@ public class TemTrain {
   /**
    * 
    * **/
-  public static void generateTrainFile(TemRunType temRunType, SubtopicType subtopicType) throws Exception{
+  public static void generateTrainFile(SimType simType, TemRunType temRunType, SubtopicType subtopicType) throws Exception{
     ArrayList<TemQuery> temQueryList = TemLoader.loadTemporalQuery(temRunType);
     
     TreeMap<String,ArrayList<String>> relMap = TemLoader.loadTemporalRels();
     
-    generateTrainFile(temQueryList, relMap, subtopicType);
+    generateTrainFile(simType, temQueryList, relMap, subtopicType);
   }
-  
   
   /**
    * 
+   * **/
+  private static boolean evaIni = false;
+  private static Evaluator evaluator;  
+  //
+  private static void generateEntireTrainingFile(SimType simType, String dir){
+    File dirFile = new File(dir);
+    File [] files = dirFile.listFiles();
+    
+    ArrayList<String> entireList = new ArrayList<>();
+    
+    for(File f: files){
+      ArrayList<String> lineList = IOBox.getLinesAsAList_UTF8(f.getAbsolutePath());
+      entireList.addAll(lineList);
+    }
+    
+    String file = dir+simType.toString()+"_entire.txt";
+    try {
+      BufferedWriter writer = IOBox.getBufferedWriter_UTF8(file);
+      for(String line: entireList){
+        writer.write(line);
+        writer.newLine();
+      }
+      writer.flush();
+      writer.close();
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
+    }    
+  }
+  /**
+   * get models
+   * **/
+  public static void train(SimType simType, RANKER_TYPE rankerType, TemMOdelType temTrainType, String dir){
+    if(!evaIni){
+      evaluator = new Evaluator(rankerType, "NDCG@10", "ERR@10");
+      evaIni = true;
+    }
+    
+    String modelPrefix = simType.toString()+"_";
+    
+    if(temTrainType == TemMOdelType.Entire){
+      File enFile = new File(dir+simType.toString()+"_entire.txt");
+      if(!enFile.exists()){
+        generateEntireTrainingFile(simType, dir);
+      }
+      
+      evaluator.evaluate_tem(enFile.getAbsolutePath(), "", "", 1.0, TDirectory.ROOT_OUTPUT+"FinalModels/"+modelPrefix+"entire.model"); 
+    }else{
+      String trainPrefix = simType.toString()+"_train_";
+      
+      //
+      String aFile = dir+trainPrefix+SubtopicType.atemporal.toString()+".txt";
+      evaluator.evaluate_tem(aFile, "", "", 1.0, TDirectory.ROOT_OUTPUT+"FinalModels/"+modelPrefix+"per_"+SubtopicType.atemporal.toString()+".model");      
+      //
+      String pFile = dir+trainPrefix+SubtopicType.past.toString()+".txt";
+      evaluator.evaluate_tem(pFile, "", "", 1.0, TDirectory.ROOT_OUTPUT+"FinalModels/"+modelPrefix+"per_"+SubtopicType.past.toString()+".model"); 
+      //
+      String rFile = dir+trainPrefix+SubtopicType.recency.toString()+".txt";
+      evaluator.evaluate_tem(rFile, "", "", 1.0, TDirectory.ROOT_OUTPUT+"FinalModels/"+modelPrefix+"per_"+SubtopicType.recency.toString()+".model"); 
+      //
+      String fFile = dir+trainPrefix+SubtopicType.future.toString()+".txt";
+      evaluator.evaluate_tem(fFile, "", "", 1.0, TDirectory.ROOT_OUTPUT+"FinalModels/"+modelPrefix+"per_"+SubtopicType.future.toString()+".model"); 
+    }
+    
+    MyThreadPool.getInstance().shutdown();
+  }
+  
+  /**
+   * test
    * **/
   public static void train(){
     String output_train = TDirectory.ROOT_OUTPUT + "l2r/train/";
@@ -188,22 +271,29 @@ public class TemTrain {
     ////1
     ///*
     try {
-      TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.atemporal);
+      //SimType.TFIDF 
+      TemTrain.generateTrainFile(SimType.TFIDF, TemRunType.DryRun, SubtopicType.atemporal);      
+      TemTrain.generateTrainFile(SimType.TFIDF, TemRunType.DryRun, SubtopicType.future);      
+      TemTrain.generateTrainFile(SimType.TFIDF, TemRunType.DryRun, SubtopicType.past);      
+      TemTrain.generateTrainFile(SimType.TFIDF, TemRunType.DryRun, SubtopicType.recency);
       
-      TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.future);
-      
-      TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.past);
-      
-      TemTrain.generateTrainFile(TemRunType.DryRun, SubtopicType.recency);
+      //
+      TemTrain.generateTrainFile(SimType.LM, TemRunType.DryRun, SubtopicType.atemporal);      
+      TemTrain.generateTrainFile(SimType.LM, TemRunType.DryRun, SubtopicType.future);      
+      TemTrain.generateTrainFile(SimType.LM, TemRunType.DryRun, SubtopicType.past);      
+      TemTrain.generateTrainFile(SimType.LM, TemRunType.DryRun, SubtopicType.recency);      
     } catch (Exception e) {
       // TODO: handle exception
       e.printStackTrace();
     }
     //*/
     
-    //2
-    //TemTrain.train();
+    //2 for test use only
+    /*
+    TemTrain.train();
+    */
     
-    
+    //3 get each models
+    TemTrain.train(SimType.LM, RANKER_TYPE.LAMBDAMART, TemMOdelType.Entire, TDirectory.ROOT_OUTPUT+"FinalTrainFiles/");
   }
 }

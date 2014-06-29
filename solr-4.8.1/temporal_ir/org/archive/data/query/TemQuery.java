@@ -72,6 +72,7 @@ public class TemQuery {
     if(useDes){
       sq += " ";
       sq += this._des;
+      sq += ".";
     }
     
     return sq;

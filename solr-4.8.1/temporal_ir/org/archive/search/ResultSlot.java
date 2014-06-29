@@ -17,7 +17,9 @@ package org.archive.search;
  * limitations under the License.
  */
 
-public class ResultSlot {
+public class ResultSlot implements Comparable{
+  public float _grTruthRelScore;
+  //
   public String _docid;
   public int _rank;
   public double _score;
@@ -26,6 +28,25 @@ public class ResultSlot {
     this._docid = docid;
     this._rank = rank;
     this._score = score;
+    
+    this._grTruthRelScore = 0;
   }
+  
+  public void setGrTruthRelScore(float grTruthRelScore){
+    this._grTruthRelScore = grTruthRelScore;
+  }
+  
+  public int compareTo(Object cmpObj){
+    ResultSlot cmp = (ResultSlot)cmpObj;
+    
+    if(this._grTruthRelScore > cmp._grTruthRelScore){
+      return -1;      
+    }else if(this._grTruthRelScore < cmp._grTruthRelScore){
+      return 1;
+    }else{
+      return 0;
+    }   
+  }
+  
   
 }

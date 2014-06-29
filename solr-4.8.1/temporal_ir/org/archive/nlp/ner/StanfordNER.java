@@ -271,7 +271,8 @@ public class StanfordNER {
     
     //2
     //String text = "What was the state of Japan's economy before abenomics?";
-    String text = "They tell The New York Times";
+    //String text = "They tell The New York Times";
+    String text = "Syria Civil War. Recently, Syria is in civil war that affect other country as well. I would like to know about this in detail.. What world would try to do to solve this problem? What do people hope and fear over this civil war?";
     StanfordNER.suitParsing(text);
     
     
