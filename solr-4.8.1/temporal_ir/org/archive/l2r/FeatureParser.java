@@ -1,6 +1,5 @@
 package org.archive.l2r;
 
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,12 +13,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.TreeMap;
 
 import org.archive.TDirectory;
-import org.archive.data.query.TemQuery;
-import org.archive.data.query.TemSubtopic;
-import org.archive.data.query.TemSubtopic.SubtopicType;
+import org.archive.dataset.query.TemQuery;
+import org.archive.dataset.query.TemSubtopic;
+import org.archive.dataset.query.TemSubtopic.SubtopicType;
 import org.archive.nlp.ner.StanfordNER;
 import org.archive.util.StrStrInt;
 import org.archive.util.StrStrStr;

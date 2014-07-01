@@ -1,4 +1,4 @@
-package org.archive.data;
+package org.archive.dataset;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
@@ -11,8 +11,8 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 
 import org.archive.TDirectory;
-import org.archive.data.query.TemQuery;
-import org.archive.data.query.TemSubtopic;
+import org.archive.dataset.query.TemQuery;
+import org.archive.dataset.query.TemSubtopic;
 import org.archive.nlp.ner.StanfordNER;
 import org.archive.util.IOBox;
 import org.archive.util.StrStrInt;
@@ -522,6 +522,7 @@ public class TemLoader {
     
   
   ////////////////////
+  /*
   public static void main(String []args){
     //1
     //TemLoader.loadTemporalQuery();
@@ -533,5 +534,6 @@ public class TemLoader {
     String file = "H:/v-haiyu/TaskPreparation/Temporalia/tool/t1.xml";
     TemLoader.parseCheckFile(null, file);
   }
+  */
   
 }

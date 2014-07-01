@@ -27,7 +27,7 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
 import org.apache.solr.common.SolrInputDocument;
 import org.archive.TDirectory;
-import org.archive.data.TemLoader;
+import org.archive.dataset.TemLoader;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more

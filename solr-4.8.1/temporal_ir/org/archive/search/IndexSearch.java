@@ -47,9 +47,8 @@ import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.archive.TDirectory;
-import org.archive.data.TemLoader;
-import org.archive.data.TemLoader.TemRunType;
-import org.archive.data.query.TemQuery;
+import org.archive.dataset.TemLoader;
+import org.archive.dataset.TemLoader.TemRunType;
 import org.archive.util.IOBox;
 import org.archive.util.StrStr;
 import org.jdom.Element;
@@ -482,6 +481,8 @@ public class IndexSearch {
     top20CheckWriter.close();    
   }
   
+  
+  
   ////////////////////
   //
   ////////////////////
@@ -491,19 +492,19 @@ public class IndexSearch {
     
     //2 top-10
     //Just replace “&” with “&amp;” in your HTML/Javascript code!
-    ///*
+    /*
     try {      
       IndexSearch.getTop10Results(TemRunType.FormalRun);
     } catch (Exception e) {
       // TODO: handle exception
       e.printStackTrace();
     }
-    //*/
+    */
     
     //3 lpFetch
-    /*
-    Document lpDocument = IndexSearch.fetchLPFile("lk-20110605040101_1606");
+    ///*
+    Document lpDocument = IndexSearch.fetchLPFile("sync3-20110803040101_2260");
     System.out.println(lpDocument.get("text"));
-    */
+    //*/
   }
 }

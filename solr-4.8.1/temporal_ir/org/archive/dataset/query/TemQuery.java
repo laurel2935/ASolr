@@ -1,8 +1,9 @@
-package org.archive.data.query;
+package org.archive.dataset.query;
 
 import java.util.ArrayList;
 
-import org.archive.data.query.TemSubtopic.SubtopicType;
+import org.archive.dataset.query.TemSubtopic.SubtopicType;
+
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
