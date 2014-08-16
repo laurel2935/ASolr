@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.TreeMap;
@@ -15,6 +17,7 @@ import org.archive.dataset.query.TemQuery;
 import org.archive.dataset.query.TemSubtopic;
 import org.archive.nlp.ner.StanfordNER;
 import org.archive.util.IOBox;
+import org.archive.util.Pair;
 import org.archive.util.StrStrInt;
 import org.archive.util.StrStrStr;
 import org.jdom.Document;
@@ -132,6 +135,57 @@ public class TemLoader {
     if(debug){
       System.out.println(relMap.get("013a"));
     }
+    
+    return relMap;
+  }
+  //
+  public static TreeMap<String, ArrayList<Pair<String,Integer>>> loadTemporalRels(TemRunType temRunType){
+    TreeMap<String,ArrayList<Pair<String,Integer>>> relMap = new TreeMap<String,ArrayList<Pair<String,Integer>>>();
+    
+    ArrayList<String> lineList = null;
+    if(temRunType == TemRunType.DryRun){
+      lineList = IOBox.getLinesAsAList_UTF8(TDirectory.NTCIR11_TIR_DryRunRelsFile);
+      
+      for(String line: lineList){
+        String [] array = line.trim().split("\\s");
+        
+        if(relMap.containsKey(array[0])){
+          relMap.get(array[0]).add(new Pair<String,Integer>(array[1], 1));
+        }else {
+          ArrayList<Pair<String,Integer>> docList = new ArrayList<Pair<String,Integer>>();
+          docList.add(new Pair<String,Integer>(array[1], 1));
+          
+          relMap.put(array[0], docList);
+        }      
+      }
+      
+      if(debug){
+        System.out.println(relMap.get("013a"));
+      }
+      
+    }else{
+      
+      lineList = IOBox.getLinesAsAList_UTF8(TDirectory.NTCIR11_TIR_FormalRunRelsFile);
+      
+      String []array;
+      for(String line: lineList){
+        //array[0]:subtopic-id / array[1]:item-string / array[3]:relevance-level
+        array = line.split("\\s");
+        String subtopicid = array[0];
+        String item = array[1];        
+        Integer releLevel = Integer.parseInt(array[2].substring(1));                
+        
+        //for _topicToReleItemMap
+        if(relMap.containsKey(subtopicid)){
+          ArrayList<Pair<String,Integer>> itemPairList = relMap.get(subtopicid);
+          itemPairList.add(new Pair<String, Integer>(item, releLevel));
+        }else{
+          ArrayList<Pair<String,Integer>> itemPairList = new ArrayList<Pair<String,Integer>>();
+          itemPairList.add(new Pair<String, Integer>(item, releLevel));
+          relMap.put(subtopicid, itemPairList);
+        } 
+      }       
+    }    
     
     return relMap;
   }

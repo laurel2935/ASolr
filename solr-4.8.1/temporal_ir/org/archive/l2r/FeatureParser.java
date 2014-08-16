@@ -467,8 +467,12 @@ public class FeatureParser {
       Date queryIssueTime = TimeFormat_QueryIssue.parse(temQuery.getQueryTime());
       Date docIssueTime = TimeFormat_DocIssue.parse(lpDoc.get("date"));
       
+      //Returns a value that is the result of subtracting 1900 from the year that contains or begins with the instant in time represented by this Date object, as interpreted in the local time zone.       
       decayY = decayEfficient(queryIssueTime.getYear() - docIssueTime.getYear());
+      //The value returned is between 0 and 11, with the value 0 representing January
       decayM = decayEfficient(queryIssueTime.getMonth() - docIssueTime.getMonth());
+      //Returns the day of the week represented by this date. The returned value (0 = Sunday, 1 = Monday, 2 = Tuesday, 3 = Wednesday, 4 = Thursday, 5 = Friday, 6 = Saturday) 
+      //represents the day of the week that contains or begins with the instant in time represented by this Date object, as interpreted in the local time zone
       decayD = decayEfficient(queryIssueTime.getDay() - docIssueTime.getDay());
     } catch (Exception e) {
       // TODO: handle exception

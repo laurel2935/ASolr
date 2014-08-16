@@ -3,6 +3,7 @@ package org.archive.l2r;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -48,7 +49,7 @@ public class TemRerank {
   
   private static final String GroupID = "TUTA1";
   /****/
-  public static void temRerank(SimType simType, TemModelType modelType, int runOrder) throws Exception{
+  public static void temRerank(SimType simType, TemModelType modelType, int runOrder, String modelDir) throws Exception{
     String runid = "TUTA1-TIR-RUN-"+Integer.toString(runOrder);
     
     String runFile = TDirectory.ROOT_OUTPUT+"FinalRuns/"+runid+".txt";
@@ -65,7 +66,7 @@ public class TemRerank {
       System.out.println((count++)+"\t"+temQuery.getTitle());
       
       //1
-      String r1 = temRerank(simType, modelType, runid, temQuery, SubtopicType.atemporal);
+      String r1 = temRerank(simType, modelType, runid, temQuery, SubtopicType.atemporal, modelDir);
       runWriter.write(r1);
       runWriter.newLine();
       
@@ -74,7 +75,7 @@ public class TemRerank {
       }      
       
       //2
-      String r2 = temRerank(simType, modelType, runid, temQuery, SubtopicType.future);
+      String r2 = temRerank(simType, modelType, runid, temQuery, SubtopicType.future, modelDir);
       runWriter.write(r2);
       runWriter.newLine();
       
@@ -83,7 +84,7 @@ public class TemRerank {
       }      
       
       //3
-      String r3 = temRerank(simType, modelType, runid, temQuery, SubtopicType.past);
+      String r3 = temRerank(simType, modelType, runid, temQuery, SubtopicType.past, modelDir);
       runWriter.write(r3);
       runWriter.newLine();
       
@@ -92,7 +93,7 @@ public class TemRerank {
       }      
       
       //4
-      String r4 = temRerank(simType, modelType, runid, temQuery, SubtopicType.recency);
+      String r4 = temRerank(simType, modelType, runid, temQuery, SubtopicType.recency, modelDir);
       runWriter.write(r4);
       runWriter.newLine();
       
@@ -108,13 +109,13 @@ public class TemRerank {
   /**
    * 
    * **/
-  public static String temRerank(SimType simType, TemModelType modelType, String runid, TemQuery temQuery, SubtopicType subtopicType) throws Exception{
+  public static String temRerank(SimType simType, TemModelType modelType, String runid, TemQuery temQuery, SubtopicType subtopicType, String modelDir) throws Exception{
     int slotNumber = 100;
     
     //initial retrieval run
     ArrayList<ResultSlot> slotList = IndexSearch.initialLuceneSearch(simType, temQuery.getSearchQuery(subtopicType), slotNumber);
     
-    ArrayList<String> rankedList = rerank(simType, modelType, temQuery, subtopicType, slotList);
+    ArrayList<String> rankedList = rerank(simType, modelType, temQuery, subtopicType, slotList, modelDir);
     
     StringBuffer buffer = new StringBuffer();
     
@@ -133,7 +134,7 @@ public class TemRerank {
    * **/
   private static Evaluator evaluator = new Evaluator(RANKER_TYPE.LAMBDAMART, "NDCG@10", "ERR@10");
   
-  public static ArrayList<String> rerank(SimType simType, TemModelType modelType, TemQuery temQuery, SubtopicType subtopicType, ArrayList<ResultSlot> slotList) throws Exception{
+  public static ArrayList<String> rerank(SimType simType, TemModelType modelType, TemQuery temQuery, SubtopicType subtopicType, ArrayList<ResultSlot> slotList, String modelDir) throws Exception{
     
     StringBuffer buffer = new StringBuffer();
     
@@ -174,16 +175,16 @@ public class TemRerank {
     //???
     String modelFile = null;
     if(modelType == TemModelType.Entire){
-      modelFile = TDirectory.ROOT_OUTPUT+"FinalModels/"+simType.toString()+"_entire.model";
+      modelFile = TDirectory.ROOT_OUTPUT+modelDir+"/"+simType.toString()+"_entire.model";
     }else{
       if(subtopicType == SubtopicType.atemporal){
-        modelFile = TDirectory.ROOT_OUTPUT+"FinalModels/"+simType.toString()+"_per_"+SubtopicType.atemporal.toString()+".model";
+        modelFile = TDirectory.ROOT_OUTPUT+modelDir+"/"+simType.toString()+"_per_"+SubtopicType.atemporal.toString()+".model";
       }else if(subtopicType == SubtopicType.future){
-        modelFile = TDirectory.ROOT_OUTPUT+"FinalModels/"+simType.toString()+"_per_"+SubtopicType.future.toString()+".model";
+        modelFile = TDirectory.ROOT_OUTPUT+modelDir+"/"+simType.toString()+"_per_"+SubtopicType.future.toString()+".model";
       }else if(subtopicType == SubtopicType.recency){
-        modelFile = TDirectory.ROOT_OUTPUT+"FinalModels/"+simType.toString()+"_per_"+SubtopicType.recency.toString()+".model";
+        modelFile = TDirectory.ROOT_OUTPUT+modelDir+"/"+simType.toString()+"_per_"+SubtopicType.recency.toString()+".model";
       }else if(subtopicType == SubtopicType.past){
-        modelFile = TDirectory.ROOT_OUTPUT+"FinalModels/"+simType.toString()+"_per_"+SubtopicType.past.toString()+".model";
+        modelFile = TDirectory.ROOT_OUTPUT+modelDir+"/"+simType.toString()+"_per_"+SubtopicType.past.toString()+".model";
       }else{
         System.err.println("SubtopicType Error!");
         System.exit(1);
@@ -284,6 +285,196 @@ public class TemRerank {
     }
   }
   
+  /**
+   * an unofficial baseline with a specific retrieval model
+   * **/
+  public static void baseline(SimType simType, int runOrder)throws Exception{
+    String runid = "TUTA1-TIR-RUN-"+Integer.toString(runOrder);
+    
+    String runFile = TDirectory.ROOT_OUTPUT+"FinalRuns/"+runid+".txt";
+    
+    BufferedWriter runWriter = IOBox.getBufferedWriter_UTF8(runFile);
+    runWriter.write("id\trank\tdoc_id\tgroup_id\trun_id");
+    runWriter.newLine();
+    
+    //formal run queries
+    ArrayList<TemQuery> temQueryList = TemLoader.loadTemporalQuery(TemRunType.FormalRun);
+    
+    int count = 1;
+    for(TemQuery temQuery: temQueryList){
+      System.out.println((count++)+"\t"+temQuery.getTitle());
+      
+      //1
+      String r1 = nonTemporalRerank(simType, runid, temQuery, SubtopicType.atemporal);
+      runWriter.write(r1);
+      runWriter.newLine();
+      
+      if(debug){
+        System.out.println("atemporal");
+      }      
+      
+      //2
+      String r2 = nonTemporalRerank(simType, runid, temQuery, SubtopicType.future);
+      runWriter.write(r2);
+      runWriter.newLine();
+      
+      if(debug){
+        System.out.println("future");
+      }      
+      
+      //3
+      String r3 = nonTemporalRerank(simType, runid, temQuery, SubtopicType.past);
+      runWriter.write(r3);
+      runWriter.newLine();
+      
+      if(debug){
+        System.out.println("past");
+      }      
+      
+      //4
+      String r4 = nonTemporalRerank(simType, runid, temQuery, SubtopicType.recency);
+      runWriter.write(r4);
+      runWriter.newLine();
+      
+      if(debug){
+        System.out.println("recency");
+      }
+      
+    }
+    
+    runWriter.flush();
+    runWriter.close();
+  }
+  
+  public static String nonTemporalRerank(SimType simType, String runid, TemQuery temQuery, SubtopicType subtopicType)throws Exception{
+    int slotNumber = 100;
+    
+    //non-temporal retrieval
+    ArrayList<ResultSlot> slotList = IndexSearch.initialLuceneSearch(simType, temQuery.getSearchQuery(subtopicType), slotNumber);
+      
+    StringBuffer buffer = new StringBuffer();
+    
+    String id = temQuery.getTemSubtopic(subtopicType).getSubtopicID();
+    
+    for(int i=0; i<slotList.size(); i++){
+      ResultSlot rsSlot = slotList.get(i);  
+      buffer.append(id+"\t"+(i+1)+"\t"+rsSlot._docid+"\t"+GroupID+"\t"+runid+"\n");
+    }
+    
+    return buffer.toString().trim();
+  }
+  
+  /////////////////////////////////
+  //rerank via formal run data
+  /////////////////////////////////
+  private static HashSet<String> loadRerankSubtopic(){
+        
+    HashSet<String> subtopicSet = new HashSet<>();
+    
+    String file_1 = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/FormalRun/RandomSplit/p-3";
+    String file_2 = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/FormalRun/RandomSplit/r-3";
+    String file_3 = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/FormalRun/RandomSplit/f-3";
+    String file_4 = "H:/v-haiyu/CodeBench/Pool_DataSet/DataSet_Temporalia/Temporalia/FormalRun/RandomSplit/a-3";
+    
+    ArrayList<String> lineList_1 = IOBox.getLinesAsAList_UTF8(file_1);
+    for(String line: lineList_1){
+      subtopicSet.add(line);
+    }
+    
+    ArrayList<String> lineList_2 = IOBox.getLinesAsAList_UTF8(file_2);
+    for(String line: lineList_2){
+      subtopicSet.add(line);
+    }
+    
+    ArrayList<String> lineList_3 = IOBox.getLinesAsAList_UTF8(file_3);
+    for(String line: lineList_3){
+      subtopicSet.add(line);
+    }
+    
+    ArrayList<String> lineList_4 = IOBox.getLinesAsAList_UTF8(file_4);
+    for(String line: lineList_4){
+      subtopicSet.add(line);
+    }
+    
+    if(debug){
+      System.out.println("train subtopic size:\t"+subtopicSet.size());
+    }
+    
+    return subtopicSet;    
+  }
+  public static void temRerank_formal(SimType simType, TemModelType modelType, int runOrder, String modelDir) throws Exception{
+    String runid = "TUTA1-TIR-RUNVIA-"+Integer.toString(runOrder);
+    
+    String runFile = TDirectory.ROOT_OUTPUT+"RerankViaFormalRun/"+runid+".txt";
+    
+    HashSet<String> subtopicSet = loadRerankSubtopic();
+    
+    BufferedWriter runWriter = IOBox.getBufferedWriter_UTF8(runFile);
+    runWriter.write("id\trank\tdoc_id\tgroup_id\trun_id");
+    runWriter.newLine();
+    
+    //formal run queries
+    ArrayList<TemQuery> temQueryList = TemLoader.loadTemporalQuery(TemRunType.FormalRun);
+    
+    int count = 1;
+    for(TemQuery temQuery: temQueryList){
+      System.out.println((count++)+"\t"+temQuery.getTitle());
+      
+      //1
+      String aSubtopicid = temQuery.getTemSubtopic(SubtopicType.atemporal).getSubtopicID();
+      if(subtopicSet.contains(aSubtopicid)){
+        String r1 = temRerank(simType, modelType, runid, temQuery, SubtopicType.atemporal, modelDir);
+        runWriter.write(r1);
+        runWriter.newLine();
+        
+        if(debug){
+          System.out.println("atemporal");
+        }    
+      }        
+      
+      //2
+      String fSubtopicid = temQuery.getTemSubtopic(SubtopicType.future).getSubtopicID();
+      if(subtopicSet.contains(fSubtopicid)){
+        String r2 = temRerank(simType, modelType, runid, temQuery, SubtopicType.future, modelDir);
+        runWriter.write(r2);
+        runWriter.newLine();
+        
+        if(debug){
+          System.out.println("future");
+        }  
+      }          
+      
+      //3
+      String pSubtopicid = temQuery.getTemSubtopic(SubtopicType.past).getSubtopicID();
+      if(subtopicSet.contains(pSubtopicid)){
+        String r3 = temRerank(simType, modelType, runid, temQuery, SubtopicType.past, modelDir);
+        runWriter.write(r3);
+        runWriter.newLine();
+        
+        if(debug){
+          System.out.println("past");
+        }  
+      }          
+      
+      //4
+      String rSubtopicid = temQuery.getTemSubtopic(SubtopicType.recency).getSubtopicID();
+      if(subtopicSet.contains(rSubtopicid)){
+        String r4 = temRerank(simType, modelType, runid, temQuery, SubtopicType.recency, modelDir);
+        runWriter.write(r4);
+        runWriter.newLine();
+        
+        if(debug){
+          System.out.println("recency");
+        }
+      }      
+      
+    }
+    
+    runWriter.flush();
+    runWriter.close();
+  }
+  
+  
   /////////////////////
   //main
   /////////////////////
@@ -291,7 +482,7 @@ public class TemRerank {
     //1
     //TemRerank.test();
     
-    //2
+    ////2
     /*
     try {
       TemRerank.precheck();
@@ -301,7 +492,7 @@ public class TemRerank {
     }
     */
     
-    //3
+    ////3
     /*    
     //!!! formal run  !!!
     try {
@@ -317,8 +508,8 @@ public class TemRerank {
     }
     */ 
     
-    //4
-    TemRerank.resultCheck(TDirectory.ROOT_OUTPUT+"FinalRuns/");
+    ////4
+    //TemRerank.resultCheck(TDirectory.ROOT_OUTPUT+"FinalRuns/");
     /*
     try {
       BufferedWriter writer = IOBox.getBufferedWriter_UTF8(TDirectory.ROOT_OUTPUT+"line.txt");
@@ -330,6 +521,30 @@ public class TemRerank {
     }
     */
     
+    ////5 unofficial baseline
+    //!!! unofficial run without temporal consideration !!!
+    /*
+    try {
+      //run-4: LM      
+      TemRerank.baseline(SimType.LM, 4); 
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
+    }
+    */
+    
+    ////6 test effectiveness vis formal run
+    ///*       
+    try {
+      //run-1: LM, Entire 
+      //run-2: LM, Per      
+      //TemRerank.temRerank_formal(SimType.LM, TemModelType.Entire, 1, "ModelFilesViaFormalRun");    
+      TemRerank.temRerank_formal(SimType.LM, TemModelType.Per, 2, "ModelFilesViaFormalRun");       
+    } catch (Exception e) {
+      // TODO: handle exception
+      e.printStackTrace();
+    }
+    //*/ 
   }
   
 }

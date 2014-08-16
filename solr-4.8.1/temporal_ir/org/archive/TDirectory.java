@@ -28,6 +28,6 @@ public class TDirectory {
 	//formal-run queries
 	public static final String NTCIR11_TIR_FormalRunQueryFile = ROOT_DATASET+"Temporalia/FormalRun/ntcir11_Temporalia_NTCIR-11TIRTopicsFormalRun.txt";
 	//formal-run rels
-	public static final String NTCIR11_TIR_FormalRunRelsFile = ROOT_DATASET+"Temporalia/FormalRun/...";
+	public static final String NTCIR11_TIR_FormalRunRelsFile = ROOT_DATASET+"Temporalia/FormalRun/tir_formalrun_20140808clean.qrels";
 	
 }
