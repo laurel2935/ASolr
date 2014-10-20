@@ -600,7 +600,7 @@ public class TemTrain {
     
     ////2 for test use only
     ///*
-    //TemTrain.crossEval(SimType.TFIDF, RANKER_TYPE.ADARANK, TemModelType.Per, SubtopicType.recency);
+    TemTrain.crossEval(SimType.TFIDF, RANKER_TYPE.ADARANK, TemModelType.Per, SubtopicType.recency);
     //*/
     
     ////3 generate models for formal run

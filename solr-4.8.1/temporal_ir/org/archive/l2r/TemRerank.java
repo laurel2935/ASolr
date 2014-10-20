@@ -533,7 +533,7 @@ public class TemRerank {
     }
     */
     
-    ////6 test effectiveness vis formal run
+    ////6 test effectiveness vis formal run, where the submitted formal run as extract source
     ///*       
     try {
       //run-1: LM, Entire 

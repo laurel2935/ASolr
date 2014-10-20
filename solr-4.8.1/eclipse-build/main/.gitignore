@@ -1,7 +1,6 @@
 /META-INF/
-/org/
 /conf/
-/uima/
+/org/
 /cities-Intersects-BBox.txt
 /data/
 /simple-Queries-BBox.txt
@@ -9,19 +8,19 @@
 /states-IsWithin-BBox.txt
 /solr/
 /spellings.txt
-/README
 /books_numeric_ids.csv
 /exampledocs/
 /lib-dirs/
 /log4j.properties
 /mailing_lists.pdf
 /old-solr-example/
-/solrj/
+/README
 /analysis-extras/
 /clustering/
 /dih/
 /dihextras/
 /extraction/
+/solrj/
 /README.txt
 /assembly/
 /langid/
@@ -29,4 +28,5 @@
 /test-morphlines/
 /custom-mimetypes.xml
 /morphlines-core.marker
+/uima/
 /velocity/
